@@ -249,10 +249,10 @@ def pytest_sessionfinish(session):
     ignored_alerts = []
     alerts = []
     if zap_alerts and os.path.exists(session.config.option.zap_ignore):
-        zap_ignore = open(session.config.option.zap_ignore, 'r')
-        ignores = zap_ignore.readlines()
+        with open(session.config.option.zap_ignore, 'r') as f:
+            zap_ignores = f.readlines()
         for alert in zap_alerts:
-            if '%s\n' % alert['alert'] in ignores:
+            if '%s\n' % alert['alert'] in zap_ignores:
                 ignored_alerts.append(alert)
             else:
                 alerts.append(alert)
@@ -260,7 +260,6 @@ def pytest_sessionfinish(session):
             print '\nThe following alerts were ignored:'
             for alert in set([' * %s [%s]' % (i['alert'], i['risk']) for i in ignored_alerts]):
                 print alert
-        zap_ignore.close()
     else:
         alerts.extend(zap_alerts)
 
