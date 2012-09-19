@@ -215,6 +215,7 @@ def pytest_sessionfinish(session):
     zap_url = session.config.option.zap_url
     zap = ZAP(proxies={'http': zap_url, 'https': zap_url})
     #TODO Wait for passive scanner to finish
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
     print 'Waiting for passive scanner to finish'
     time.sleep(10)  # Give the passive scanner a chance to finish
 
@@ -231,8 +232,10 @@ def pytest_sessionfinish(session):
             time.sleep(1)
         print '\rSpider progress: 100%'
         #TODO API call for new URLs discovered by spider
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         print 'Spider found %s additional URLs' % (len(zap.urls) - len(zap_urls))
         #TODO Wait for passive scanner to finish
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
         print 'Skipping spider'
@@ -255,10 +258,12 @@ def pytest_sessionfinish(session):
 
     # Save session
     #TODO Resolve 'Internal error' when saving
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
     print 'Saving session'
     try:
         zap.save_session('zap')
         #TODO Wait for save to finish
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=374
         time.sleep(10)  # Saving is asynchronous
     except:
         pass
@@ -288,7 +293,9 @@ def pytest_sessionfinish(session):
 
     #TODO Save alerts report
     #TODO Save JUnit style report
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=371
     #TODO Save URLs report
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
 
     if not session.config._zap_config.has_option('control', 'stop') or\
         session.config._zap_config.getboolean('control', 'stop'):
