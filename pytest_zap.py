@@ -108,8 +108,9 @@ def pytest_sessionstart(session):
                 # No default path for Linux
                 print 'Installation directory must be set using --zap-path command line option.'
 
-        #TODO Make sure home can be relative to current path
-        zap_home = session.config.option.zap_home or os.sep.join([zap_path, 'home'])
+        zap_home = session.config.option.zap_home and\
+                   os.path.abspath(session.config.option.zap_home) or\
+                   os.sep.join([zap_path, 'home'])
 
         if not os.path.exists(zap_home):
             os.makedirs(zap_home)
