@@ -15,6 +15,11 @@ __version__ = '0.1'
 
 def pytest_addoption(parser):
     group = parser.getgroup('zap', 'zap')
+    group._addoption('--zap-interactive',
+        action='store_true',
+        dest='zap_interactive',
+        default=False,
+        help='run zap in interactive mode. (default: %default)'),
     group._addoption('--zap-path',
         action='store',
         dest='zap_path',
@@ -91,8 +96,9 @@ def pytest_sessionstart(session):
         else:
             zap_script = ['zap.sh']
 
-        # HACK - otherwise API not enabled
-        zap_script.append('-daemon')
+        if not session.config.option.zap_interactive:
+            # Run as a daemon
+            zap_script.append('-daemon')
 
         zap_path = session.config.option.zap_path
         if not zap_path:
@@ -138,6 +144,14 @@ def pytest_sessionstart(session):
                 user_dir.firstChild)
         else:
             user_dir.appendChild(document.createTextNode(zap_home))
+
+        if session.config.option.zap_interactive:
+            # Enable API
+            enabled = document.createElement('enabled')
+            enabled.appendChild(document.createTextNode('true'))
+            api = document.createElement('api')
+            api.appendChild(enabled)
+            config.appendChild(api)
 
         # Set proxy
         proxy = config.getElementsByTagName('proxy')[0]
