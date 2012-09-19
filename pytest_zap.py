@@ -189,10 +189,11 @@ def pytest_sessionstart(session):
         print '\nStarting ZAP\n'
         #TODO Move all launcher code to Python client
         subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
-        #TODO Wait for the proxy to be running, fail if it's not after reasonable timeout
         #TODO If launching, check that ZAP is not currently running?
         #TODO Support opening a saved session
-        while True:
+        timeout = 60
+        end_time = time.time() + timeout
+        while(True):
             try:
                 proxies = {'http': session.config.option.zap_url,
                            'https': session.config.option.zap_url}
@@ -202,6 +203,8 @@ def pytest_sessionstart(session):
             except IOError:
                 pass
             time.sleep(1)
+            if(time.time() > end_time):
+                raise Exception('Timeout after %s seconds waiting for ZAP.' % timeout)
 
 
 def pytest_sessionfinish(session):
