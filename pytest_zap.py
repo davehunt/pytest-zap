@@ -57,6 +57,12 @@ def pytest_addoption(parser):
         default='zap_ignore.txt',
         metavar='path',
         help='location of ignored alerts text file. (default: %default)')
+    group._addoption('--zap-cert',
+        action='store',
+        dest='zap_cert',
+        default='zap.cert',
+        metavar='path',
+        help='location of ssl certificate. (default: %default)')
     #TODO Add observation mode to prevent failing when alerts are raised
 
 
@@ -142,6 +148,22 @@ def pytest_sessionstart(session):
         port.replaceChild(
             document.createTextNode(str(urlparse(session.config.option.zap_url).port)),
             port.firstChild)
+
+        # Add certificate
+        #TODO Set certificate via the API
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=372
+        if os.path.exists(session.config.option.zap_cert):
+            with open(session.config.option.zap_cert,'r') as f:
+                zap_cert = f.read()
+            rootca = document.createElement('rootca')
+            rootca.appendChild(document.createTextNode(zap_cert))
+            param = document.createElement('param')
+            param.appendChild(rootca)
+            dynssl = document.createElement('dynssl')
+            dynssl.appendChild(param)
+            config.appendChild(dynssl)
+        #TODO If certificate is not provided then generate one via the API
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=372
 
         config_file = open(config_path, 'w')
         document.writexml(config_file)
