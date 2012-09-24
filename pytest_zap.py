@@ -147,6 +147,16 @@ def pytest_sessionstart(session):
             api.appendChild(enabled)
             config.appendChild(api)
 
+            # Disable update checking
+            start = config.getElementsByTagName('start')[0]
+            check_for_updates = start.getElementsByTagName('checkForUpdates')[0]
+            check_for_updates.replaceChild(
+                document.createTextNode("0"),
+                check_for_updates.firstChild)
+            day_last_checked = document.createElement('dayLastChecked')
+            day_last_checked.appendChild(document.createTextNode('never'))
+            start.appendChild(day_last_checked)
+
         # Set proxy
         proxy = config.getElementsByTagName('proxy')[0]
         ip = proxy.getElementsByTagName('ip')[0]
