@@ -1,7 +1,9 @@
+import glob
 from xml.dom.minidom import parse
 from ConfigParser import SafeConfigParser
 from urlparse import urlparse
 import copy
+import zipfile
 import os
 import platform
 import subprocess
@@ -111,6 +113,7 @@ def pytest_sessionstart(session):
         zap_home = session.config.option.zap_home and\
                    os.path.abspath(session.config.option.zap_home) or\
                    os.sep.join([zap_path, 'home'])
+        session.config.option.zap_home = zap_home
 
         if not os.path.exists(zap_home):
             os.makedirs(zap_home)
@@ -271,6 +274,14 @@ def pytest_sessionfinish(session):
         time.sleep(10)  # Saving is asynchronous
     except:
         pass
+
+    # Archive session
+    #TODO Remove this
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
+    zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
+    for file in glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*')):
+        zip.write(file, file.rpartition(os.path.sep)[2])
+    zip.close()
 
     # Filter alerts
     ignored_alerts = []
