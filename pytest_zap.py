@@ -88,13 +88,10 @@ def pytest_sessionstart(session):
 
     if not session.config._zap_config.has_option('control', 'start') or\
        session.config._zap_config.getboolean('control', 'start'):
-        #TODO Test on additional platforms
         if platform.system() == 'Windows':
             zap_script = ['start /b zap.bat']
-        elif platform.system() == 'Darwin':
-            zap_script = ['java', '-jar', 'zap.jar']
         else:
-            zap_script = ['zap.sh']
+            zap_script = ['./zap.sh']
 
         if not session.config.option.zap_interactive:
             # Run as a daemon
@@ -108,11 +105,8 @@ def pytest_sessionstart(session):
                 if not os.path.exists(zap_path):
                     # Win XP default path
                     zap_path = "C:\Program Files\OWASP\Zed Attack Proxy"
-            elif platform.system() == 'Darwin':
-                zap_path = '/Applications/OWASP ZAP.app/Contents/Resources/Java'
             else:
-                # No default path for Linux
-                print 'Installation directory must be set using --zap-path command line option.'
+                raise Exception('Installation directory must be set using --zap-path command line option.')
 
         zap_home = session.config.option.zap_home and\
                    os.path.abspath(session.config.option.zap_home) or\
