@@ -21,11 +21,6 @@ def pytest_addoption(parser):
         dest='zap_interactive',
         default=False,
         help='run zap in interactive mode. (default: %default)')
-    group._addoption('--zap-args',
-        action='store',
-        dest='zap_args',
-        metavar='str',
-        help='command line arguments to pass to zap.')
     group._addoption('--zap-path',
         action='store',
         dest='zap_path',
@@ -109,17 +104,12 @@ def pytest_sessionstart(session):
        session.config._zap_config.getboolean('control', 'start'):
         if platform.system() == 'Windows':
             zap_script = ['start /b zap.bat']
-        elif platform.system() == 'Darwin':
-            zap_script = ['java', '-jar', 'zap.jar']
         else:
             zap_script = ['./zap.sh']
 
         if not session.config.option.zap_interactive:
             # Run as a daemon
             zap_script.append('-daemon')
-
-        if session.config.option.zap_args:
-            zap_script.extend(session.config.option.zap_args.split())
 
         zap_path = session.config.option.zap_path
         if not zap_path:
@@ -129,8 +119,6 @@ def pytest_sessionstart(session):
                 if not os.path.exists(zap_path):
                     # Win XP default path
                     zap_path = "C:\Program Files\OWASP\Zed Attack Proxy"
-            elif platform.system() == 'Darwin':
-                zap_path = '/Applications/OWASP ZAP.app/Contents/Resources/Java'
             else:
                 raise Exception('Installation directory must be set using --zap-path command line option.')
 
