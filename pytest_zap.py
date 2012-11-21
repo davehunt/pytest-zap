@@ -43,11 +43,16 @@ def pytest_addoption(parser):
         default='zap.cfg',
         metavar='path',
         help='location of zap configuration file. (default: %default)')
-    group._addoption('--zap-url',
+    group._addoption('--zap-host',
         action='store',
-        dest='zap_url',
-        metavar='url',
-        help='address zap is listening on. (default: http://localhost:8080)')
+        dest='zap_host',
+        metavar='str',
+        help='host zap is listening on. (default: localhost)')
+    group._addoption('--zap-port',
+        action='store',
+        dest='zap_port',
+        type='int',
+        help='port zap is listening on. (default: 8080)')
     group._addoption('--zap-target',
         action='store',
         dest='zap_target',
@@ -82,9 +87,12 @@ def pytest_configure(config):
     config._zap_config = SafeConfigParser()
     config._zap_config.read(config.option.zap_config)
 
-    config.option.zap_url = config.option.zap_url or\
-                            (hasattr(config.option, 'proxy_url') and config.option.proxy_url) or\
-                            'http://localhost:8080'
+    config.option.zap_host = config.option.zap_host or\
+                             (hasattr(config.option, 'proxy_host') and config.option.proxy_host) or\
+                             'localhost'
+    config.option.zap_port = config.option.zap_port or\
+                             (hasattr(config.option, 'proxy_port') and config.option.proxy_port) or\
+                             8080
     config.option.zap_target = config.option.zap_target or\
                                (hasattr(config.option, 'base_url') and config.option.base_url)
 
@@ -176,11 +184,11 @@ def pytest_sessionstart(session):
         proxy = config.getElementsByTagName('proxy')[0]
         ip = proxy.getElementsByTagName('ip')[0]
         ip.replaceChild(
-            document.createTextNode(urlparse(session.config.option.zap_url).hostname),
+            document.createTextNode(session.config.option.zap_host),
             ip.firstChild)
         port = proxy.getElementsByTagName('port')[0]
         port.replaceChild(
-            document.createTextNode(str(urlparse(session.config.option.zap_url).port)),
+            document.createTextNode(session.config.option.zap_port),
             port.firstChild)
 
         # Add certificate
@@ -215,8 +223,10 @@ def pytest_sessionstart(session):
         end_time = time.time() + timeout
         while(True):
             try:
-                proxies = {'http': session.config.option.zap_url,
-                           'https': session.config.option.zap_url}
+                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
+                                            session.config.option.zap_port)
+                proxies = {'http': zap_url,
+                           'https': zap_url}
                 status = urllib.urlopen('http://zap/', proxies=proxies).getcode()
                 if status == 200:
                     break
@@ -232,7 +242,8 @@ def pytest_sessionfinish(session):
         return
 
     print '\n'
-    zap_url = session.config.option.zap_url
+    zap_url = 'http://%s:%s' % (session.config.option.zap_host,
+                                session.config.option.zap_port)
     zap = ZAP(proxies={'http': zap_url, 'https': zap_url})
     #TODO Wait for passive scanner to finish
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
