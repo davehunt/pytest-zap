@@ -346,23 +346,24 @@ def pytest_sessionfinish(session):
     if not session.config._zap_config.has_option('control', 'stop') or\
         session.config._zap_config.getboolean('control', 'stop'):
         print '\nStopping ZAP'
-        zap.shutdown()
-        timeout = 60
-        end_time = time.time() + timeout
-        while(True):
-            print 'Waiting for shutdown...'
-            try:
-                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
-                                            session.config.option.zap_port)
-                proxies = {'http': zap_url,
-                           'https': zap_url}
-                urllib.urlopen('http://zap/', proxies=proxies)
-            except IOError:
-                break
-            time.sleep(1)
-            if(time.time() > end_time):
-                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
-                session.config.zap_process.kill()
+        session.config.zap_process.kill()
+        #TODO Use API to shutdown ZAP, fallback to killing the process
+#        zap.shutdown()
+#        timeout = 60
+#        end_time = time.time() + timeout
+#        while(True):
+#            try:
+#                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
+#                                            session.config.option.zap_port)
+#                proxies = {'http': zap_url,
+#                           'https': zap_url}
+#                urllib.urlopen('http://zap/', proxies=proxies)
+#            except IOError:
+#                break
+#            time.sleep(1)
+#            if(time.time() > end_time):
+#                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
+#                session.config.zap_process.kill()
 
 
     #TODO Fail if alerts were raised (unless in observation mode)
