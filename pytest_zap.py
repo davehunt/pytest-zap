@@ -1,7 +1,6 @@
 import glob
 from xml.dom.minidom import parse
 from ConfigParser import SafeConfigParser
-from urlparse import urlparse
 import copy
 import zipfile
 import os
