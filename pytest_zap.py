@@ -193,7 +193,7 @@ def pytest_sessionstart(session):
             ip.firstChild)
         port = proxy.getElementsByTagName('port')[0]
         port.replaceChild(
-            document.createTextNode(session.config.option.zap_port),
+            document.createTextNode(str(session.config.option.zap_port)),
             port.firstChild)
 
         # Add certificate
