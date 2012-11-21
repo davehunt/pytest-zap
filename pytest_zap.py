@@ -68,6 +68,11 @@ def pytest_addoption(parser):
         dest='zap_scan',
         default=False,
         help='scan the target. (default: %default)')
+    group._addoption('--zap-save-session',
+        action='store_true',
+        dest='zap_save_session',
+        default=False,
+        help='save the zap session in zap.session within home directory')
     group._addoption('--zap-ignore',
         action='store',
         dest='zap_ignore',
@@ -290,22 +295,25 @@ def pytest_sessionfinish(session):
     # Save session
     #TODO Resolve 'Internal error' when saving
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
-    print 'Saving session'
-    try:
-        zap.save_session('zap')
-        #TODO Wait for save to finish
-        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=374
-        time.sleep(10)  # Saving is asynchronous
-    except:
-        pass
+    if session.config.option.zap_save_session:
+        print 'Saving session'
+        try:
+            zap.save_session('zap')
+            #TODO Wait for save to finish
+            # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=374
+            time.sleep(10)  # Saving is asynchronous
+        except:
+            pass
 
-    # Archive session
-    #TODO Remove this
-    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-    zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
-    for file in glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*')):
-        zip.write(file, file.rpartition(os.path.sep)[2])
-    zip.close()
+        # Archive session
+        #TODO Remove this
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
+        zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
+        for file in glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*')):
+            zip.write(file, file.rpartition(os.path.sep)[2])
+        zip.close()
+    else:
+        print 'Skipping save session'
 
     # Filter alerts
     ignored_alerts = []
