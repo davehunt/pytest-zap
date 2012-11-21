@@ -221,7 +221,7 @@ def pytest_sessionstart(session):
         print '\nStarting ZAP\n'
         #TODO Move all launcher code to Python client
         print 'Running: %s\nFrom: %s\n' % (' '.join(zap_script), zap_path)
-        subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
+        session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
         #TODO If launching, check that ZAP is not currently running?
         #TODO Support opening a saved session
         timeout = 60
@@ -348,5 +348,22 @@ def pytest_sessionfinish(session):
         session.config._zap_config.getboolean('control', 'stop'):
         print '\nStopping ZAP'
         zap.shutdown()
+        timeout = 60
+        end_time = time.time() + timeout
+        while(True):
+            print 'Waiting for shutdown...'
+            try:
+                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
+                                            session.config.option.zap_port)
+                proxies = {'http': zap_url,
+                           'https': zap_url}
+                urllib.urlopen('http://zap/', proxies=proxies)
+            except IOError:
+                break
+            time.sleep(1)
+            if(time.time() > end_time):
+                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
+                session.config.zap_process.kill()
+
 
     #TODO Fail if alerts were raised (unless in observation mode)
