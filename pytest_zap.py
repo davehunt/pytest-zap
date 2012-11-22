@@ -66,7 +66,7 @@ def pytest_addoption(parser):
         action='store_true',
         dest='zap_save_session',
         default=False,
-        help='save the zap session in zap.session within home directory')
+        help='save the zap session in zap.session within home directory. (default: %default)')
     group._addoption('--zap-ignore',
         action='store',
         dest='zap_ignore',
