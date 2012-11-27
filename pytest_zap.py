@@ -111,6 +111,8 @@ def pytest_sessionstart(session):
             # Run as a daemon
             zap_script.append('-daemon')
 
+        zap_script.append('-port %s' % session.config.option.zap_port)
+
         zap_path = session.config.option.zap_path
         if not zap_path:
             if platform.system() == 'Windows':
@@ -178,10 +180,6 @@ def pytest_sessionstart(session):
         ip.replaceChild(
             document.createTextNode(session.config.option.zap_host),
             ip.firstChild)
-        port = proxy.getElementsByTagName('port')[0]
-        port.replaceChild(
-            document.createTextNode(str(session.config.option.zap_port)),
-            port.firstChild)
 
         # Add certificate
         #TODO Set certificate via the API
