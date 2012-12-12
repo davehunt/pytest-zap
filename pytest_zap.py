@@ -282,11 +282,12 @@ def pytest_sessionfinish(session):
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
     if session.config.option.zap_save_session:
         print 'Saving session'
+
+        if not session.config.option.zap_home:
+            raise Exception('Home directory must be set using --zap-home command line option.')
+
         try:
-            zap.save_session('zap')
-            #TODO Wait for save to finish
-            # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=374
-            time.sleep(10)  # Saving is asynchronous
+            zap.save_session(os.path.join(os.path.abspath(session.config.option.zap_home), 'zap'))
         except:
             pass
 
@@ -294,8 +295,12 @@ def pytest_sessionfinish(session):
         #TODO Remove this
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
         zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
-        for file in glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*')):
-            zip.write(file, file.rpartition(os.path.sep)[2])
+        session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
+        if len(session_files) > 0:
+            for file in session_files:
+                zip.write(file, file.rpartition(os.path.sep)[2])
+        else:
+            raise Exception('No session files to archive.')
         zip.close()
     else:
         print 'Skipping save session'
