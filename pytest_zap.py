@@ -337,8 +337,13 @@ def pytest_sessionfinish(session):
     if not session.config._zap_config.has_option('control', 'stop') or\
         session.config._zap_config.getboolean('control', 'stop'):
         print '\nStopping ZAP'
-        session.config.zap_process.kill()
-        #TODO Use API to shutdown ZAP, fallback to killing the process
+        #TODO For now kill if we started the process, or use API if not
+        if hasattr(session.config, 'zap_process'):
+            session.config.zap_process.kill()
+        else:
+            zap.shutdown()
+
+#        #TODO Use API to shutdown ZAP, fallback to killing the process
 #        zap.shutdown()
 #        timeout = 60
 #        end_time = time.time() + timeout
@@ -354,7 +359,10 @@ def pytest_sessionfinish(session):
 #            time.sleep(1)
 #            if(time.time() > end_time):
 #                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
+#            if hasattr(session.config, 'zap_process'):
 #                session.config.zap_process.kill()
+#            else:
+#                raise Exception('Unable to kill ZAP process.')
 
 
     #TODO Fail if alerts were raised (unless in observation mode)
