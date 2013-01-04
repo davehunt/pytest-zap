@@ -10,7 +10,7 @@ import sys
 import time
 import urllib
 
-from zap import ZAP
+from zapv2 import ZAPv2
 
 __version__ = '0.1'
 
@@ -234,7 +234,7 @@ def pytest_sessionfinish(session):
     print '\n'
     zap_url = 'http://%s:%s' % (session.config.option.zap_host,
                                 session.config.option.zap_port)
-    zap = ZAP(proxies={'http': zap_url, 'https': zap_url})
+    zap = ZAPv2(proxies={'http': zap_url, 'https': zap_url})
     #TODO Wait for passive scanner to finish
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
     print 'Waiting for passive scanner to finish'
@@ -242,38 +242,38 @@ def pytest_sessionfinish(session):
 
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
-        zap_urls = copy.deepcopy(zap.urls)
+        zap_urls = copy.deepcopy(zap.core.urls())
         print '\rSpider progress: 0%',
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
-        zap.start_spider(session.config.option.zap_target)
-        while int(zap.spider_status[0]) < 100:
-            print '\rSpider progress: %s%%' % zap.spider_status[0],
+        zap.spider.scan(session.config.option.zap_target)
+        while int(zap.spider.status()[0]) < 100:
+            print '\rSpider progress: %s%%' % zap.spider.status()[0],
             sys.stdout.flush()
             time.sleep(1)
         print '\rSpider progress: 100%'
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
-        print 'Spider found %s additional URLs' % (len(zap.urls) - len(zap_urls))
+        print 'Spider found %s additional URLs' % (len(zap.core.urls()) - len(zap_urls))
         #TODO Wait for passive scanner to finish
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
         print 'Skipping spider'
 
-    zap_alerts = copy.deepcopy(zap.alerts)
+    zap_alerts = copy.deepcopy(zap.core.alerts())
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
         print '\rScan progress: 0%',
-        zap.start_scan(session.config.option.zap_target)
-        while int(zap.scan_status[0]) < 100:
-            print '\rScan progress: %s%%' % zap.scan_status[0],
+        zap.ascan.scan(session.config.option.zap_target)
+        while int(zap.ascan.status()[0]) < 100:
+            print '\rScan progress: %s%%' % zap.ascan.status()[0],
             sys.stdout.flush()
             time.sleep(1)
         print '\rScan progress: 100%'
-        print 'Scan found %s additional alerts' % (len(zap.alerts) - len(zap_alerts))
-        zap_alerts = copy.deepcopy(zap.alerts)
+        print 'Scan found %s additional alerts' % (len(zap.core.alerts()) - len(zap_alerts))
+        zap_alerts = copy.deepcopy(zap.core.alerts())
     else:
         print 'Skipping scan'
 
@@ -287,7 +287,7 @@ def pytest_sessionfinish(session):
             raise Exception('Home directory must be set using --zap-home command line option.')
 
         try:
-            zap.save_session(os.path.join(os.path.abspath(session.config.option.zap_home), 'zap'))
+            zap.core.saveSession(os.path.join(os.path.abspath(session.config.option.zap_home), 'zap'))
         except:
             pass
 
@@ -337,32 +337,24 @@ def pytest_sessionfinish(session):
     if not session.config._zap_config.has_option('control', 'stop') or\
         session.config._zap_config.getboolean('control', 'stop'):
         print '\nStopping ZAP'
-        #TODO For now kill if we started the process, or use API if not
-        if hasattr(session.config, 'zap_process'):
-            session.config.zap_process.kill()
-        else:
-            zap.shutdown()
-
-#        #TODO Use API to shutdown ZAP, fallback to killing the process
-#        zap.shutdown()
-#        timeout = 60
-#        end_time = time.time() + timeout
-#        while(True):
-#            try:
-#                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
-#                                            session.config.option.zap_port)
-#                proxies = {'http': zap_url,
-#                           'https': zap_url}
-#                urllib.urlopen('http://zap/', proxies=proxies)
-#            except IOError:
-#                break
-#            time.sleep(1)
-#            if(time.time() > end_time):
-#                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
-#            if hasattr(session.config, 'zap_process'):
-#                session.config.zap_process.kill()
-#            else:
-#                raise Exception('Unable to kill ZAP process.')
-
+        zap.core.shutdown()
+        timeout = 60
+        end_time = time.time() + timeout
+        while(True):
+            try:
+                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
+                                            session.config.option.zap_port)
+                proxies = {'http': zap_url,
+                           'https': zap_url}
+                urllib.urlopen('http://zap/', proxies=proxies)
+            except IOError:
+                break
+            time.sleep(1)
+            if(time.time() > end_time):
+                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
+            if hasattr(session.config, 'zap_process'):
+                session.config.zap_process.kill()
+            else:
+                raise Exception('Unable to kill ZAP process.')
 
     #TODO Fail if alerts were raised (unless in observation mode)
