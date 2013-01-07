@@ -242,38 +242,38 @@ def pytest_sessionfinish(session):
 
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
-        zap_urls = copy.deepcopy(zap.core.urls())
+        zap_urls = copy.deepcopy(zap.core.urls().get('urls'))
         print '\rSpider progress: 0%',
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
-        while int(zap.spider.status()[0]) < 100:
-            print '\rSpider progress: %s%%' % zap.spider.status()[0],
+        while int(zap.spider.status().get('status')) < 100:
+            print '\rSpider progress: %s%%' % zap.spider.status().get('status'),
             sys.stdout.flush()
             time.sleep(1)
         print '\rSpider progress: 100%'
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
-        print 'Spider found %s additional URLs' % (len(zap.core.urls()) - len(zap_urls))
+        print 'Spider found %s additional URLs' % (len(zap.core.urls().get('urls')) - len(zap_urls))
         #TODO Wait for passive scanner to finish
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
         print 'Skipping spider'
 
-    zap_alerts = copy.deepcopy(zap.core.alerts())
+    zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
         print '\rScan progress: 0%',
         zap.ascan.scan(session.config.option.zap_target)
-        while int(zap.ascan.status()[0]) < 100:
-            print '\rScan progress: %s%%' % zap.ascan.status()[0],
+        while int(zap.ascan.status().get('status')) < 100:
+            print '\rScan progress: %s%%' % zap.ascan.status().get('status'),
             sys.stdout.flush()
             time.sleep(1)
         print '\rScan progress: 100%'
-        print 'Scan found %s additional alerts' % (len(zap.core.alerts()) - len(zap_alerts))
-        zap_alerts = copy.deepcopy(zap.core.alerts())
+        print 'Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts))
+        zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
     else:
         print 'Skipping scan'
 
