@@ -3,6 +3,7 @@ from xml.dom.minidom import parse
 from ConfigParser import SafeConfigParser
 import copy
 import zipfile
+import logging
 import os
 import platform
 import subprocess
@@ -85,6 +86,21 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    file_handler = logging.FileHandler('%s.log' % __name__, 'w')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
     config._zap_config = SafeConfigParser()
     config._zap_config.read(config.option.zap_config)
 
@@ -93,6 +109,7 @@ def pytest_configure(config):
 
 
 def pytest_sessionstart(session):
+    logger = logging.getLogger(__name__)
     if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
         return
 
@@ -162,12 +179,11 @@ def pytest_sessionstart(session):
 
             # Disable update checking
             start = config.getElementsByTagName('start')[0]
-            check_for_updates = start.getElementsByTagName('checkForUpdates')[0]
-            check_for_updates.replaceChild(
-                document.createTextNode("0"),
-                check_for_updates.firstChild)
+            check_for_updates = document.createElement('checkForUpdates')
+            check_for_updates.appendChild(document.createTextNode('0'))
+            start.appendChild(check_for_updates)
             day_last_checked = document.createElement('dayLastChecked')
-            day_last_checked.appendChild(document.createTextNode('never'))
+            day_last_checked.appendChild(document.createTextNode('Never'))
             start.appendChild(day_last_checked)
 
         # Set proxy
@@ -199,9 +215,10 @@ def pytest_sessionstart(session):
 
         zap_script.extend(['-dir', zap_home])
 
-        print '\nStarting ZAP\n'
+        logger.info('Starting ZAP')
         #TODO Move all launcher code to Python client
-        print 'Running: %s\nFrom: %s\n' % (' '.join(zap_script), zap_path)
+        logger.info('Running: %s' % ' '.join(zap_script))
+        logger.info('From: %s' % zap_path)
         session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
         #TODO If launching, check that ZAP is not currently running?
         #TODO Support opening a saved session
@@ -225,6 +242,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
+    logger = logging.getLogger(__name__)
     if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
         return
 
@@ -232,29 +250,30 @@ def pytest_sessionfinish(session):
     zap = session.config.zap
     #TODO Wait for passive scanner to finish
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
-    print 'Waiting for passive scanner to finish'
+    logger.info('Waiting for passive scanner to finish')
     time.sleep(10)  # Give the passive scanner a chance to finish
 
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
-        zap_urls = copy.deepcopy(zap.core.urls().get('urls'))
+        zap_urls = copy.deepcopy(zap.core.urls)
         print '\rSpider progress: 0%',
+        time.sleep(30)
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
-        while int(zap.spider.status().get('status')) < 100:
-            print '\rSpider progress: %s%%' % zap.spider.status().get('status'),
+        while int(zap.spider.status.get('status')) < 100:
+            print '\rSpider progress: %s%%' % zap.spider.status.get('status'),
             sys.stdout.flush()
             time.sleep(1)
         print '\rSpider progress: 100%'
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
-        print 'Spider found %s additional URLs' % (len(zap.core.urls().get('urls')) - len(zap_urls))
+        logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
         #TODO Wait for passive scanner to finish
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
-        print 'Skipping spider'
+        logger.info('Skipping spider')
 
     zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
 
@@ -262,25 +281,24 @@ def pytest_sessionfinish(session):
     if session.config.option.zap_scan and session.config.option.zap_target:
         print '\rScan progress: 0%',
         zap.ascan.scan(session.config.option.zap_target)
-        while int(zap.ascan.status().get('status')) < 100:
-            print '\rScan progress: %s%%' % zap.ascan.status().get('status'),
+        while int(zap.ascan.status.get('status')) < 100:
+            print '\rScan progress: %s%%' % zap.ascan.status.get('status'),
             sys.stdout.flush()
             time.sleep(1)
         print '\rScan progress: 100%'
-        print 'Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts))
+        logger.info('Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts)))
         zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
     else:
-        print 'Skipping scan'
+        logger.info('Skipping scan')
 
     # Save session
     #TODO Resolve 'Internal error' when saving
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
     if session.config.option.zap_save_session:
-        print 'Saving session'
+        logger.info('Saving session')
 
         if not session.config.option.zap_home:
-            raise Exception('Home directory must be set using --zap-home command line option.')
-
+            logger.error('Home directory must be set using --zap-home command line option.')
         try:
             zap.core.saveSession(os.path.join(os.path.abspath(session.config.option.zap_home), 'zap'))
         except:
@@ -289,16 +307,16 @@ def pytest_sessionfinish(session):
         # Archive session
         #TODO Remove this
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-        zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
+        session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
-            for file in session_files:
-                zip.write(file, file.rpartition(os.path.sep)[2])
+            for session_file in session_files:
+                session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
         else:
-            raise Exception('No session files to archive.')
-        zip.close()
+            logger.warn('No session files to archive.')
+        session_zip.close()
     else:
-        print 'Skipping save session'
+        logger.info('Skipping save session')
 
     # Filter alerts
     ignored_alerts = []
@@ -312,16 +330,14 @@ def pytest_sessionfinish(session):
             else:
                 alerts.append(alert)
         if ignored_alerts:
-            print '\nThe following alerts were ignored:'
             for alert in set([' * %s [%s]' % (i['alert'], i['risk']) for i in ignored_alerts]):
-                print alert
+                logger.info('Ignored alert: %s' % alert)
     else:
         alerts.extend(zap_alerts)
 
     if alerts:
-        print '\nThe following alerts were raised:'
         for alert in set([' * %s [%s]' % (i['alert'], i['risk']) for i in alerts]):
-            print alert
+            logger.warn('Alert: %s' % alert)
 
     #TODO Save alerts report
     #TODO Save JUnit style report
@@ -331,7 +347,7 @@ def pytest_sessionfinish(session):
 
     if not session.config._zap_config.has_option('control', 'stop') or\
         session.config._zap_config.getboolean('control', 'stop'):
-        print '\nStopping ZAP'
+        logger.info('Stopping ZAP')
         try:
             zap.core.shutdown()
         except:
@@ -349,10 +365,10 @@ def pytest_sessionfinish(session):
                 break
             time.sleep(1)
             if(time.time() > end_time):
-                print 'Timeout after %s seconds waiting for ZAP to shutdown.' % timeout
+                logger.error('Timeout after %s seconds waiting for ZAP to shutdown.' % timeout)
             if hasattr(session.config, 'zap_process'):
                 session.config.zap_process.kill()
             else:
-                raise Exception('Unable to kill ZAP process.')
+                logger.error('Unable to kill ZAP process.')
 
     #TODO Fail if alerts were raised (unless in observation mode)
