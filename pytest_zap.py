@@ -253,8 +253,8 @@ def pytest_sessionfinish(session):
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
-        while int(zap.spider.status.get('status')) < 100:
-            print '\rSpider progress: %s%%' % zap.spider.status.get('status'),
+        while int(zap.spider.status) < 100:
+            print '\rSpider progress: %s%%' % zap.spider.status,
             sys.stdout.flush()
             time.sleep(1)
         print '\rSpider progress: 100%'
