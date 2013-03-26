@@ -273,8 +273,8 @@ def pytest_sessionfinish(session):
     if session.config.option.zap_scan and session.config.option.zap_target:
         print '\rScan progress: 0%',
         zap.ascan.scan(session.config.option.zap_target)
-        while int(zap.ascan.status.get('status')) < 100:
-            print '\rScan progress: %s%%' % zap.ascan.status.get('status'),
+        while int(zap.ascan.status) < 100:
+            print '\rScan progress: %s%%' % zap.ascan.status,
             sys.stdout.flush()
             time.sleep(1)
         print '\rScan progress: 100%'
