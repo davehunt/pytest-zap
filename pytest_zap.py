@@ -241,7 +241,7 @@ def pytest_sessionfinish(session):
     print '\n'
     zap = session.config.zap
     #TODO Wait for passive scanner to finish
-    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=573
     logger.info('Waiting for passive scanner to finish')
     time.sleep(10)  # Give the passive scanner a chance to finish
 
@@ -262,7 +262,7 @@ def pytest_sessionfinish(session):
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
         #TODO Wait for passive scanner to finish
-        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=367
+        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=573
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
         logger.info('Skipping spider')
