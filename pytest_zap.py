@@ -135,7 +135,9 @@ def pytest_sessionstart(session):
                     # Win XP default path
                     zap_path = "C:\Program Files\OWASP\Zed Attack Proxy"
             else:
-                raise Exception('Installation directory must be set using --zap-path command line option.')
+                message = 'Installation directory must be set using --zap-path command line option.'
+                logger.error(message)
+                raise Exception(message)
 
         zap_home = session.config.option.zap_home and\
                    os.path.abspath(session.config.option.zap_home) or\
@@ -238,7 +240,14 @@ def pytest_sessionstart(session):
                 pass
             time.sleep(1)
             if(time.time() > end_time):
-                raise Exception('Timeout after %s seconds waiting for ZAP.' % timeout)
+                message = 'Timeout after %s seconds waiting for ZAP.' % timeout
+                logger.error(message)
+                try:
+                    session.config.zap_process.kill()
+                except:
+                    pass
+                finally:
+                    raise Exception(message)
 
 
 def pytest_sessionfinish(session):
