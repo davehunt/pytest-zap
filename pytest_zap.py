@@ -135,24 +135,30 @@ def pytest_sessionstart(session):
 
         zap_home = session.config.option.zap_home and\
                    os.path.abspath(session.config.option.zap_home) or\
-                   os.sep.join([zap_path, 'home'])
+                   os.path.join(zap_path, 'home')
         session.config.option.zap_home = zap_home
 
         if not os.path.exists(zap_home):
+            logger.info('Creating home directory in %s' % zap_home)
             os.makedirs(zap_home)
 
-        license_path = os.sep.join([zap_home, 'AcceptedLicense'])
+        license_path = os.path.join(zap_home, 'AcceptedLicense')
         if not os.path.exists(license_path):
             # Create a blank accepted license file, otherwise will be prompted for
+            logger.info('Creating blank license file in %s' % license_path)
             license_file = open(license_path, 'w')
             license_file.close()
 
         # Create config.xml file
         #TODO Move to method?
-        config_path = os.sep.join([zap_home, 'config.xml'])
-        default_config_path = os.sep.join([zap_path, 'xml', 'config.xml'])
-        base_config_path = os.path.exists(config_path) and config_path or default_config_path
+        config_path = os.path.join(zap_home, 'config.xml')
+        default_config_path = os.path.join(zap_path, 'xml', 'config.xml')
+        base_config_path = os.path.exists(config_path) and\
+                           os.path.getsize(config_path) > 0 and\
+                           config_path or\
+                           default_config_path
 
+        logger.info('Using configuration from %s' % base_config_path)
         document = parse(base_config_path)
         config = document.getElementsByTagName('config')[0]
 
@@ -189,6 +195,7 @@ def pytest_sessionstart(session):
             document.createTextNode(session.config.option.zap_host),
             ip.firstChild)
 
+        logger.info('Writing configuration to %s' % config_path)
         config_file = open(config_path, 'w')
         document.writexml(config_file)
         config_file.close()
@@ -197,8 +204,8 @@ def pytest_sessionstart(session):
 
         logger.info('Starting ZAP')
         #TODO Move all launcher code to Python client
-        logger.info('Running: %s' % ' '.join(zap_script))
-        logger.info('From: %s' % zap_path)
+        logger.info('Running %s' % ' '.join(zap_script))
+        logger.info('From %s' % zap_path)
         session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
         #TODO If launching, check that ZAP is not currently running?
         #TODO Support opening a saved session
