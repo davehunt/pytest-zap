@@ -295,14 +295,15 @@ def pytest_sessionfinish(session):
     #TODO Resolve 'Internal error' when saving
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
     if session.config.option.zap_save_session:
-        logger.info('Saving session')
+        session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
+        logger.info('Saving session in %s' % session_path)
 
         if not session.config.option.zap_home:
             logger.error('Home directory must be set using --zap-home command line option.')
         try:
-            zap.core.saveSession(os.path.join(os.path.abspath(session.config.option.zap_home), 'zap'))
+            zap.core.save_session(session_path)
         except:
-            pass
+            logger.error('Failed to save session!')
 
         # Archive session
         #TODO Remove this
@@ -315,6 +316,7 @@ def pytest_sessionfinish(session):
         else:
             logger.warn('No session files to archive.')
         session_zip.close()
+        logger.info('Session archived in %s' % session_zip.filename)
     else:
         logger.info('Skipping save session')
 
@@ -330,13 +332,13 @@ def pytest_sessionfinish(session):
             else:
                 alerts.append(alert)
         if ignored_alerts:
-            for alert in set([' * %s [%s]' % (i['alert'], i['risk']) for i in ignored_alerts]):
+            for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in ignored_alerts]):
                 logger.info('Ignored alert: %s' % alert)
     else:
         alerts.extend(zap_alerts)
 
     if alerts:
-        for alert in set([' * %s [%s]' % (i['alert'], i['risk']) for i in alerts]):
+        for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in alerts]):
             logger.warn('Alert: %s' % alert)
 
     #TODO Save alerts report
