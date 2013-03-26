@@ -32,4 +32,3 @@ For full usage details run the following command:
       --zap-scan          scan the target. (default: False)
       --zap-save-session  save the zap session in zap.session within home directory. (default: False)
       --zap-ignore=path   location of ignored alerts text file. (default: zap_ignore.txt)
-      --zap-cert=path     location of ssl certificate. (default: zap.cert)
