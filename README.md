@@ -30,5 +30,6 @@ For full usage details run the following command:
       --zap-target=url    target url for spider and scan.
       --zap-spider        spider the target. (default: False)
       --zap-scan          scan the target. (default: False)
-      --zap-save-session  save the zap session in zap.session within home directory. (default: False)
+      --zap-save          save the zap session in zap.session within home directory. (default: False)
+      --zap-load=path     location of an archived zap session to open.
       --zap-ignore=path   location of ignored alerts text file. (default: zap_ignore.txt)

@@ -65,11 +65,16 @@ def pytest_addoption(parser):
         dest='zap_scan',
         default=False,
         help='scan the target. (default: %default)')
-    group._addoption('--zap-save-session',
+    group._addoption('--zap-save',
         action='store_true',
         dest='zap_save_session',
         default=False,
         help='save the zap session in zap.session within home directory. (default: %default)')
+    group._addoption('--zap-load',
+        action='store',
+        dest='zap_load_session',
+        metavar='path',
+        help='location of an archived zap session to open.')
     group._addoption('--zap-ignore',
         action='store',
         dest='zap_ignore',
@@ -208,10 +213,9 @@ def pytest_sessionstart(session):
         logger.info('From %s' % zap_path)
         session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
         #TODO If launching, check that ZAP is not currently running?
-        #TODO Support opening a saved session
         timeout = 60
         end_time = time.time() + timeout
-        while(True):
+        while True:
             try:
                 zap_url = 'http://%s:%s' % (session.config.option.zap_host,
                                             session.config.option.zap_port)
@@ -224,20 +228,33 @@ def pytest_sessionstart(session):
             except IOError:
                 pass
             time.sleep(1)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 message = 'Timeout after %s seconds waiting for ZAP.' % timeout
                 logger.error(message)
-                try:
-                    session.config.zap_process.kill()
-                except:
-                    pass
-                finally:
-                    raise Exception(message)
+                kill_zap_process(session.config.zap_process)
+                raise Exception(message)
 
         logger.info('Generating a root CA certificate')
         #TODO Change this to a function call
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=572
         session.config.zap.core.generate_root_ca
+
+        if session.config.option.zap_load_session:
+            try:
+                #TODO Remove this when the archived sessions are supported by default
+                # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
+                load_session_zip_path = os.path.abspath(session.config.option.zap_load_session)
+                logger.info('Extracting session from %s' % load_session_zip_path)
+                load_session_zip = zipfile.ZipFile(load_session_zip_path)
+                load_session_path = os.path.abspath(os.path.join(session.config.option.zap_home, 'load_session'))
+                load_session_zip.extractall(load_session_path)
+                load_session_file = glob.glob(os.path.join(load_session_path, '*.session'))[0]
+                logger.info('Loading session from %s' % load_session_file)
+                session.config.zap.core.load_session(load_session_file)
+            except (IOError, zipfile.BadZipfile) as e:
+                logger.error('Failed to load session. %s' % e)
+                kill_zap_process(session.config.zap_process)
+                raise
 
 
 def pytest_sessionfinish(session):
@@ -305,7 +322,7 @@ def pytest_sessionfinish(session):
             logger.error('Failed to save session!')
 
         # Archive session
-        #TODO Remove this
+        #TODO Remove this when the session is archived by default
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
         session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
@@ -355,7 +372,7 @@ def pytest_sessionfinish(session):
             pass
         timeout = 60
         end_time = time.time() + timeout
-        while(True):
+        while True:
             try:
                 zap_url = 'http://%s:%s' % (session.config.option.zap_host,
                                             session.config.option.zap_port)
@@ -365,11 +382,17 @@ def pytest_sessionfinish(session):
             except IOError:
                 break
             time.sleep(1)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 logger.error('Timeout after %s seconds waiting for ZAP to shutdown.' % timeout)
             if hasattr(session.config, 'zap_process'):
-                session.config.zap_process.kill()
-            else:
-                logger.error('Unable to kill ZAP process.')
+                kill_zap_process(session.config.zap_process)
 
     #TODO Fail if alerts were raised (unless in observation mode)
+
+
+def kill_zap_process(process):
+    logger = logging.getLogger(__name__)
+    try:
+        process.kill()
+    except:
+        logger.error('Unable to kill ZAP process.')
