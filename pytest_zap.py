@@ -283,6 +283,7 @@ def pytest_sessionfinish(session):
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
         zap_urls = copy.deepcopy(zap.core.urls)
+        logger.info('Starting spider')
         print '\rSpider progress: 0%',
         time.sleep(30)
         zap.urlopen(session.config.option.zap_target)
@@ -293,11 +294,13 @@ def pytest_sessionfinish(session):
             sys.stdout.flush()
             time.sleep(1)
         print '\rSpider progress: 100%'
+        logger.info('Finished spider')
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
         #TODO Wait for passive scanner to finish
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=573
+        logger.info('Waiting for passive scanner to finish')
         time.sleep(5)  # Give the passive scanner a chance to finish
     else:
         logger.info('Skipping spider')
@@ -306,6 +309,7 @@ def pytest_sessionfinish(session):
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
+        logger.info('Starting scan')
         print '\rScan progress: 0%',
         zap.ascan.scan(session.config.option.zap_target)
         while int(zap.ascan.status) < 100:
@@ -313,6 +317,7 @@ def pytest_sessionfinish(session):
             sys.stdout.flush()
             time.sleep(1)
         print '\rScan progress: 100%'
+        logger.info('Finished scan')
         logger.info('Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts)))
         zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
     else:
