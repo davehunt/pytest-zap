@@ -11,6 +11,7 @@ import sys
 import time
 import urllib
 
+import py
 from zapv2 import ZAPv2
 
 __version__ = '0.1'
@@ -81,6 +82,11 @@ def pytest_addoption(parser):
         default='zap_ignore.txt',
         metavar='path',
         help='location of ignored alerts text file. (default: %default)')
+    group._addoption('--zap-skip-tests',
+        action='store_true',
+        dest='zap_skip_tests',
+        default=False,
+        help='skip all tests')
     #TODO Add observation mode to prevent failing when alerts are raised
 
 
@@ -255,6 +261,11 @@ def pytest_sessionstart(session):
                 logger.error('Failed to load session. %s' % e)
                 kill_zap_process(session.config.zap_process)
                 raise
+
+
+def pytest_runtest_setup(item):
+    if item.config.option.zap_skip_tests:
+        py.test.skip()
 
 
 def pytest_sessionfinish(session):
