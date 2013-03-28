@@ -332,10 +332,7 @@ def pytest_sessionfinish(session):
 
         if not session.config.option.zap_home:
             logger.error('Home directory must be set using --zap-home command line option.')
-        try:
             zap.core.save_session(session_path)
-        except:
-            logger.error('Failed to save session!')
     else:
         logger.info('Skipping save session')
 
