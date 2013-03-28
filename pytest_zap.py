@@ -240,6 +240,17 @@ def pytest_sessionstart(session):
                 kill_zap_process(session.config.zap_process)
                 raise Exception(message)
 
+        # Save session
+        if session.config.option.zap_save_session:
+            session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
+            logger.info('Saving session in %s' % session_path)
+
+            if not session.config.option.zap_home:
+                logger.error('Home directory must be set using --zap-home command line option.')
+                session.config.zap.core.save_session(session_path)
+        else:
+            logger.info('Skipping save session')
+
         logger.info('Generating a root CA certificate')
         #TODO Change this to a function call
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=572
@@ -322,19 +333,6 @@ def pytest_sessionfinish(session):
         zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
     else:
         logger.info('Skipping scan')
-
-    # Save session
-    #TODO Resolve 'Internal error' when saving
-    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=370
-    if session.config.option.zap_save_session:
-        session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
-        logger.info('Saving session in %s' % session_path)
-
-        if not session.config.option.zap_home:
-            logger.error('Home directory must be set using --zap-home command line option.')
-            zap.core.save_session(session_path)
-    else:
-        logger.info('Skipping save session')
 
     # Filter alerts
     ignored_alerts = []
