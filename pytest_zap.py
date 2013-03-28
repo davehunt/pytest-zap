@@ -336,19 +336,6 @@ def pytest_sessionfinish(session):
             zap.core.save_session(session_path)
         except:
             logger.error('Failed to save session!')
-
-        # Archive session
-        #TODO Remove this when the session is archived by default
-        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-        session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
-        session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
-        if len(session_files) > 0:
-            for session_file in session_files:
-                session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
-        else:
-            logger.warn('No session files to archive.')
-        session_zip.close()
-        logger.info('Session archived in %s' % session_zip.filename)
     else:
         logger.info('Skipping save session')
 
@@ -402,6 +389,20 @@ def pytest_sessionfinish(session):
                 logger.error('Timeout after %s seconds waiting for ZAP to shutdown.' % timeout)
             if hasattr(session.config, 'zap_process'):
                 kill_zap_process(session.config.zap_process)
+
+    # Archive session
+    #TODO Remove this when the session is archived by default
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
+    if session.config.option.zap_save_session:
+        session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
+        session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
+        if len(session_files) > 0:
+            for session_file in session_files:
+                session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
+        else:
+            logger.warn('No session files to archive.')
+        session_zip.close()
+        logger.info('Session archived in %s' % session_zip.filename)
 
     #TODO Fail if alerts were raised (unless in observation mode)
 
