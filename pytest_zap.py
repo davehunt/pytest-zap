@@ -230,6 +230,7 @@ def pytest_sessionstart(session):
                            'https': zap_url}
                 status = urllib.urlopen('http://zap/', proxies=proxies).getcode()
                 if status == 200:
+                    #TODO Check that this is actually ZAP
                     session.config.zap = ZAPv2(proxies=proxies)
                     break
             except IOError:
@@ -248,7 +249,8 @@ def pytest_sessionstart(session):
 
             if not session.config.option.zap_home:
                 logger.error('Home directory must be set using --zap-home command line option.')
-                session.config.zap.core.save_session(session_path)
+
+            session.config.zap.core.save_session(session_path)
         else:
             logger.info('Skipping save session')
 
