@@ -23,6 +23,7 @@ For full usage details run the following command:
     zap:
       --zap-interactive   run zap in interactive mode. (default: False)
       --zap-path=path     location of zap installation.
+      --zap-log=path      location of zap log file (default zap.log)
       --zap-home=path     location of zap home directory.
       --zap-config=path   location of zap configuration file. (default: zap.cfg)
       --zap-host=str      host zap is listening on. (default: localhost)

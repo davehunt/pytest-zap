@@ -28,6 +28,12 @@ def pytest_addoption(parser):
         dest='zap_path',
         metavar='path',
         help='location of zap installation.')
+    group._addoption('--zap-log',
+        action='store',
+        dest='zap_log',
+        default='zap.log',
+        metavar='path',
+        help='location of zap log file. (default %default)')
     group._addoption('--zap-home',
         action='store',
         dest='zap_home',
@@ -117,6 +123,9 @@ def pytest_sessionstart(session):
     logger = logging.getLogger(__name__)
     if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
         return
+
+    zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
+    proxies = {'http': zap_url, 'https': zap_url}
 
     if not session.config._zap_config.has_option('control', 'start') or\
        session.config._zap_config.getboolean('control', 'start'):
@@ -219,56 +228,66 @@ def pytest_sessionstart(session):
         logger.info('From %s' % zap_path)
 
         # Check if ZAP is already running
-        zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
         if is_zap_running(zap_url):
             message = 'ZAP is already running'
             logger.error(message)
             raise Exception(message)
 
         # Start ZAP
+        session.config.log_file = open(os.path.expanduser(session.config.option.zap_log), 'w')
         #TODO catch exception on launching
-        session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
+        session.config.zap_process = subprocess.Popen(zap_script,
+                                                      cwd=zap_path,
+                                                      stdout=session.config.log_file,
+                                                      stderr=subprocess.STDOUT)
         try:
             wait_for_zap_to_start(zap_url)
-            proxies = {'http': zap_url, 'https': zap_url}
             session.config.zap = ZAPv2(proxies=proxies)
         except:
             kill_zap_process(session.config.zap_process)
             raise
+    else:
+        # Check if ZAP is already running
+        logger.info('Connecting to existing ZAP instance at %s' % zap_url)
+        if not is_zap_running(zap_url):
+            message = 'ZAP is not running'
+            logger.error(message)
+            raise Exception(message)
+        session.config.zap = ZAPv2(proxies=proxies)
 
-        # Save session
-        if session.config.option.zap_save_session:
-            session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
-            logger.info('Saving session in %s' % session_path)
+    # Save session
+    if session.config.option.zap_save_session:
+        session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
+        logger.info('Saving session in %s' % session_path)
 
-            if not session.config.option.zap_home:
-                logger.error('Home directory must be set using --zap-home command line option')
+        if not session.config.option.zap_home:
+            logger.error('Home directory must be set using --zap-home command line option')
 
-            session.config.zap.core.save_session(session_path)
-        else:
-            logger.info('Skipping save session')
+        session.config.zap.core.save_session(session_path)
+    else:
+        logger.info('Skipping save session')
 
-        logger.info('Generating a root CA certificate')
-        #TODO Change this to a function call
-        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=572
-        session.config.zap.core.generate_root_ca
+    logger.info('Generating a root CA certificate')
+    #TODO Change this to a function call
+    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=572
+    session.config.zap.core.generate_root_ca
 
-        if session.config.option.zap_load_session:
-            try:
-                #TODO Remove this when the archived sessions are supported by default
-                # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-                load_session_zip_path = os.path.abspath(session.config.option.zap_load_session)
-                logger.info('Extracting session from %s' % load_session_zip_path)
-                load_session_zip = zipfile.ZipFile(load_session_zip_path)
-                load_session_path = os.path.abspath(os.path.join(session.config.option.zap_home, 'load_session'))
-                load_session_zip.extractall(load_session_path)
-                load_session_file = glob.glob(os.path.join(load_session_path, '*.session'))[0]
-                logger.info('Loading session from %s' % load_session_file)
-                session.config.zap.core.load_session(load_session_file)
-            except (IOError, zipfile.BadZipfile) as e:
-                logger.error('Failed to load session. %s' % e)
-                kill_zap_process(session.config.zap_process)
-                raise
+    if session.config.option.zap_load_session:
+        try:
+            #TODO Remove this when the archived sessions are supported by default
+            # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
+            load_session_zip_path = os.path.abspath(session.config.option.zap_load_session)
+            logger.info('Extracting session from %s' % load_session_zip_path)
+            load_session_zip = zipfile.ZipFile(load_session_zip_path)
+            load_session_path = os.path.abspath(os.path.join(session.config.option.zap_home, 'load_session'))
+            load_session_zip.extractall(load_session_path)
+            load_session_file = glob.glob(os.path.join(load_session_path, '*.session'))[0]
+            logger.info('Loading session from %s' % load_session_file)
+            session.config.zap.core.load_session(load_session_file)
+        except (IOError, zipfile.BadZipfile) as e:
+            logger.error('Failed to load session. %s' % e)
+            kill_zap_process(session.config.zap_process)
+            raise
 
 
 def pytest_runtest_setup(item):
@@ -292,8 +311,7 @@ def pytest_sessionfinish(session):
     if session.config.option.zap_spider and session.config.option.zap_target:
         zap_urls = copy.deepcopy(zap.core.urls)
         logger.info('Starting spider')
-        print '\rSpider progress: 0%',
-        time.sleep(30)
+        print 'Spider progress: 0%',
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
@@ -371,6 +389,10 @@ def pytest_sessionfinish(session):
         except:
             if hasattr(session.config, 'zap_process'):
                 kill_zap_process(session.config.zap_process)
+
+    # Close log file
+    if hasattr(session.config, 'log_file'):
+        session.config.log_file.close()
 
     # Archive session
     #TODO Remove this when the session is archived by default
