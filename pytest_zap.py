@@ -217,6 +217,7 @@ def pytest_sessionstart(session):
         #TODO Move all launcher code to Python client
         logger.info('Running %s' % ' '.join(zap_script))
         logger.info('From %s' % zap_path)
+        #TODO catch exception on launching
         session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
         #TODO If launching, check that ZAP is not currently running?
         timeout = 60
@@ -389,15 +390,15 @@ def pytest_sessionfinish(session):
     #TODO Remove this when the session is archived by default
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
     if session.config.option.zap_save_session:
-        session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
+            session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
             for session_file in session_files:
                 session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
+            session_zip.close()
+            logger.info('Session archived in %s' % session_zip.filename)
         else:
             logger.warn('No session files to archive.')
-        session_zip.close()
-        logger.info('Session archived in %s' % session_zip.filename)
 
     #TODO Fail if alerts were raised (unless in observation mode)
 
