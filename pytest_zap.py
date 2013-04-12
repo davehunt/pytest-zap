@@ -140,7 +140,7 @@ def pytest_sessionstart(session):
                     # Win XP default path
                     zap_path = "C:\Program Files\OWASP\Zed Attack Proxy"
             else:
-                message = 'Installation directory must be set using --zap-path command line option.'
+                message = 'Installation directory must be set using --zap-path command line option'
                 logger.error(message)
                 raise Exception(message)
 
@@ -217,30 +217,24 @@ def pytest_sessionstart(session):
         #TODO Move all launcher code to Python client
         logger.info('Running %s' % ' '.join(zap_script))
         logger.info('From %s' % zap_path)
+
+        # Check if ZAP is already running
+        zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
+        if is_zap_running(zap_url):
+            message = 'ZAP is already running'
+            logger.error(message)
+            raise Exception(message)
+
+        # Start ZAP
         #TODO catch exception on launching
         session.config.zap_process = subprocess.Popen(zap_script, cwd=zap_path, stdout=subprocess.PIPE)
-        #TODO If launching, check that ZAP is not currently running?
-        timeout = 60
-        end_time = time.time() + timeout
-        while True:
-            try:
-                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
-                                            session.config.option.zap_port)
-                proxies = {'http': zap_url,
-                           'https': zap_url}
-                status = urllib.urlopen('http://zap/', proxies=proxies).getcode()
-                if status == 200:
-                    #TODO Check that this is actually ZAP
-                    session.config.zap = ZAPv2(proxies=proxies)
-                    break
-            except IOError:
-                pass
-            time.sleep(1)
-            if time.time() > end_time:
-                message = 'Timeout after %s seconds waiting for ZAP.' % timeout
-                logger.error(message)
-                kill_zap_process(session.config.zap_process)
-                raise Exception(message)
+        try:
+            wait_for_zap_to_start(zap_url)
+            proxies = {'http': zap_url, 'https': zap_url}
+            session.config.zap = ZAPv2(proxies=proxies)
+        except:
+            kill_zap_process(session.config.zap_process)
+            raise
 
         # Save session
         if session.config.option.zap_save_session:
@@ -248,7 +242,7 @@ def pytest_sessionstart(session):
             logger.info('Saving session in %s' % session_path)
 
             if not session.config.option.zap_home:
-                logger.error('Home directory must be set using --zap-home command line option.')
+                logger.error('Home directory must be set using --zap-home command line option')
 
             session.config.zap.core.save_session(session_path)
         else:
@@ -371,20 +365,10 @@ def pytest_sessionfinish(session):
             zap.core.shutdown()
         except:
             pass
-        timeout = 60
-        end_time = time.time() + timeout
-        while True:
-            try:
-                zap_url = 'http://%s:%s' % (session.config.option.zap_host,
-                                            session.config.option.zap_port)
-                proxies = {'http': zap_url,
-                           'https': zap_url}
-                urllib.urlopen('http://zap/', proxies=proxies)
-            except IOError:
-                break
-            time.sleep(1)
-            if time.time() > end_time:
-                logger.error('Timeout after %s seconds waiting for ZAP to shutdown.' % timeout)
+        try:
+            zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
+            wait_for_zap_to_stop(zap_url)
+        except:
             if hasattr(session.config, 'zap_process'):
                 kill_zap_process(session.config.zap_process)
 
@@ -400,9 +384,52 @@ def pytest_sessionfinish(session):
             session_zip.close()
             logger.info('Session archived in %s' % session_zip.filename)
         else:
-            logger.warn('No session files to archive.')
+            logger.warn('No session files to archive')
 
     #TODO Fail if alerts were raised (unless in observation mode)
+
+
+def is_zap_running(url):
+    logger = logging.getLogger(__name__)
+    try:
+        proxies = {'http': url, 'https': url}
+        response = urllib.urlopen('http://zap/', proxies=proxies)
+        if 'ZAP-Header' in response.headers.get('Access-Control-Allow-Headers', []):
+            return True
+        else:
+            message = 'Service running at %s is not ZAP' % url
+            logger.error(message)
+            raise Exception(message)
+    except IOError:
+        return False
+
+
+def wait_for_zap_to_start(url):
+    logger = logging.getLogger(__name__)
+    logger.info('Waiting for ZAP to start')
+    timeout = 60
+    end_time = time.time() + timeout
+    while not is_zap_running(url):
+        time.sleep(1)
+        if time.time() > end_time:
+            message = 'Timeout after %s seconds waiting for ZAP' % timeout
+            logger.error(message)
+            raise Exception(message)
+    logger.info('ZAP has successfully started')
+
+
+def wait_for_zap_to_stop(url):
+    logger = logging.getLogger(__name__)
+    logger.info('Waiting for ZAP to shutdown')
+    timeout = 60
+    end_time = time.time() + timeout
+    while is_zap_running(url):
+        time.sleep(1)
+        if time.time() > end_time:
+            message = 'Timeout after %s seconds waiting for ZAP to shutdown' % timeout
+            logger.error(message)
+            raise Exception(message)
+    logger.info('ZAP has successfully shutdown')
 
 
 def kill_zap_process(process):
@@ -410,4 +437,4 @@ def kill_zap_process(process):
     try:
         process.kill()
     except:
-        logger.error('Unable to kill ZAP process.')
+        logger.error('Unable to kill ZAP process')
