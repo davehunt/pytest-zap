@@ -309,17 +309,19 @@ def pytest_sessionfinish(session):
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
         zap_urls = copy.deepcopy(zap.core.urls)
-        logger.info('Starting spider')
-        print 'Spider progress: 0%',
+        logger.info('Spider progress: 0%')
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
-        while int(zap.spider.status) < 100:
-            print '\rSpider progress: %s%%' % zap.spider.status,
-            sys.stdout.flush()
+        status = int(zap.spider.status)
+        while status < 100:
+            new_status = int(zap.spider.status)
+            if new_status > status:
+                if new_status < 100:
+                    logger.info('Spider progress: %s%%' % new_status)
+                status = new_status
             time.sleep(5)
-        print '\rSpider progress: 100%'
-        logger.info('Finished spider')
+        logger.info('Spider progress: 100%')
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
@@ -331,15 +333,17 @@ def pytest_sessionfinish(session):
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
-        logger.info('Starting scan')
-        print 'Scan progress: 0%',
+        logger.info('Scan progress: 0%')
         zap.ascan.scan(session.config.option.zap_target)
-        while int(zap.ascan.status) < 100:
-            print '\rScan progress: %s%%' % zap.ascan.status,
-            sys.stdout.flush()
+        status = int(zap.ascan.status)
+        while status < 100:
+            new_status = int(zap.ascan.status)
+            if new_status > status:
+                if new_status < 100:
+                    logger.info('Scan progress: %s%%' % new_status)
+                status = new_status
             time.sleep(5)
-        print '\rScan progress: 100%'
-        logger.info('Finished scan')
+        logger.info('Scan progress: 100%')
         zap_alerts.extend(get_alerts(zap, start=len(zap_alerts)))
     else:
         logger.info('Skipping scan')
@@ -412,10 +416,8 @@ def get_alerts(api, start=0):
     logger = logging.getLogger(__name__)
     alerts_per_request = 1000
     alerts = []
-    logger.info('Getting alerts')
     while True:
-        print 'Getting alerts: %s-%s' % (start, (start + alerts_per_request))
-        sys.stdout.flush()
+        logger.info('Getting alerts: %s-%s' % (start, (start + alerts_per_request)))
         new_alerts = api.core.alerts(start=start, count=alerts_per_request).get('alerts')
         alerts.extend(new_alerts)
         if len(new_alerts) == alerts_per_request:
@@ -444,7 +446,7 @@ def wait_for_passive_scan(api):
     logger = logging.getLogger(__name__)
     logger.info('Waiting for passive scan')
     while int(api.pscan.records_to_scan) > 0:
-        print 'Records to scan: %s' % api.pscan.records_to_scan
+        logger.info('Records to scan: %s' % api.pscan.records_to_scan)
         time.sleep(5)
     logger.info('Finished passive scan')
 
