@@ -394,6 +394,7 @@ def pytest_sessionfinish(session):
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
     if session.config.option.zap_save_session:
         #TODO Wait for zap.session.lck to not exist
+        wait_for_lock_file_removed(os.path.join(session.config.option.zap_home, 'zap.session.lck'))
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
             session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
@@ -446,6 +447,18 @@ def wait_for_passive_scan(api):
         print 'Records to scan: %s' % api.pscan.records_to_scan
         time.sleep(5)
     logger.info('Finished passive scan')
+
+
+def wait_for_lock_file_removed(path):
+    logger = logging.getLogger(__name__)
+    timeout = 60
+    end_time = time.time() + timeout
+    while os.path.exists(path):
+        time.sleep(1)
+        if time.time() > end_time:
+            message = 'Timeout after %s seconds waiting for lock file to be removed: %s' % (timeout, path)
+            logger.error(message)
+            raise Exception(message)
 
 
 def wait_for_zap_to_start(url):
