@@ -318,7 +318,7 @@ def pytest_sessionfinish(session):
         while int(zap.spider.status) < 100:
             print '\rSpider progress: %s%%' % zap.spider.status,
             sys.stdout.flush()
-            time.sleep(1)
+            time.sleep(5)
         print '\rSpider progress: 100%'
         logger.info('Finished spider')
         #TODO API call for new URLs discovered by spider
@@ -336,12 +336,12 @@ def pytest_sessionfinish(session):
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
         logger.info('Starting scan')
-        print '\rScan progress: 0%',
+        print 'Scan progress: 0%',
         zap.ascan.scan(session.config.option.zap_target)
         while int(zap.ascan.status) < 100:
             print '\rScan progress: %s%%' % zap.ascan.status,
             sys.stdout.flush()
-            time.sleep(1)
+            time.sleep(5)
         print '\rScan progress: 100%'
         logger.info('Finished scan')
         logger.info('Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts)))
