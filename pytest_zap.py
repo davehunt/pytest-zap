@@ -276,7 +276,7 @@ def pytest_sessionstart(session):
         try:
             #TODO Remove this when the archived sessions are supported by default
             # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-            load_session_zip_path = os.path.abspath(session.config.option.zap_load_session)
+            load_session_zip_path = os.path.expanduser(session.config.option.zap_load_session)
             logger.info('Extracting session from %s' % load_session_zip_path)
             load_session_zip = zipfile.ZipFile(load_session_zip_path)
             load_session_path = os.path.abspath(os.path.join(session.config.option.zap_home, 'load_session'))
@@ -302,10 +302,9 @@ def pytest_sessionfinish(session):
 
     print '\n'
     zap = session.config.zap
-    #TODO Wait for passive scanner to finish
-    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=573
-    logger.info('Waiting for passive scanner to finish')
-    time.sleep(10)  # Give the passive scanner a chance to finish
+
+    # Passive scan
+    wait_for_passive_scan(zap)
 
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
@@ -324,14 +323,11 @@ def pytest_sessionfinish(session):
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
-        #TODO Wait for passive scanner to finish
-        # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=573
-        logger.info('Waiting for passive scanner to finish')
-        time.sleep(5)  # Give the passive scanner a chance to finish
+        wait_for_passive_scan(zap)
     else:
         logger.info('Skipping spider')
 
-    zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
+    zap_alerts = get_alerts(zap)
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
@@ -344,8 +340,7 @@ def pytest_sessionfinish(session):
             time.sleep(5)
         print '\rScan progress: 100%'
         logger.info('Finished scan')
-        logger.info('Scan found %s additional alerts' % (len(zap.core.alerts().get('alerts')) - len(zap_alerts)))
-        zap_alerts = copy.deepcopy(zap.core.alerts().get('alerts'))
+        zap_alerts.extend(get_alerts(zap, start=len(zap_alerts)))
     else:
         logger.info('Skipping scan')
 
@@ -398,6 +393,7 @@ def pytest_sessionfinish(session):
     #TODO Remove this when the session is archived by default
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
     if session.config.option.zap_save_session:
+        #TODO Wait for zap.session.lck to not exist
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
             session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
@@ -409,6 +405,23 @@ def pytest_sessionfinish(session):
             logger.warn('No session files to archive')
 
     #TODO Fail if alerts were raised (unless in observation mode)
+
+
+def get_alerts(api, start=0):
+    logger = logging.getLogger(__name__)
+    alerts_per_request = 1000
+    alerts = []
+    logger.info('Getting alerts')
+    while True:
+        print 'Getting alerts: %s-%s' % (start, (start + alerts_per_request))
+        sys.stdout.flush()
+        new_alerts = api.core.alerts(start=start, count=alerts_per_request).get('alerts')
+        alerts.extend(new_alerts)
+        if len(new_alerts) == alerts_per_request:
+            start += alerts_per_request
+        else:
+            logger.info('Got %s alerts' % len(alerts))
+            return alerts
 
 
 def is_zap_running(url):
@@ -424,6 +437,15 @@ def is_zap_running(url):
             raise Exception(message)
     except IOError:
         return False
+
+
+def wait_for_passive_scan(api):
+    logger = logging.getLogger(__name__)
+    logger.info('Waiting for passive scan')
+    while int(api.pscan.records_to_scan) > 0:
+        print 'Records to scan: %s' % api.pscan.records_to_scan
+        time.sleep(5)
+    logger.info('Finished passive scan')
 
 
 def wait_for_zap_to_start(url):
