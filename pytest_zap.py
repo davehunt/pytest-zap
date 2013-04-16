@@ -7,7 +7,6 @@ import logging
 import os
 import platform
 import subprocess
-import sys
 import time
 import urllib
 
@@ -119,6 +118,8 @@ def pytest_configure(config):
                                (hasattr(config.option, 'base_url') and config.option.base_url)
 
 
+#TODO Use py.test fixtures
+#See http://pytest.org/latest/fixture.html
 def pytest_sessionstart(session):
     logger = logging.getLogger(__name__)
     if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
@@ -140,6 +141,7 @@ def pytest_sessionstart(session):
 
         zap_script.append('-port %s' % session.config.option.zap_port)
 
+        #TODO Support user directory for ZAP path
         zap_path = session.config.option.zap_path
         if not zap_path:
             if platform.system() == 'Windows':
@@ -153,6 +155,7 @@ def pytest_sessionstart(session):
                 logger.error(message)
                 raise Exception(message)
 
+        #TODO Support user directory for ZAP home
         zap_home = session.config.option.zap_home and\
                    os.path.abspath(session.config.option.zap_home) or\
                    os.path.join(zap_path, 'home')
@@ -235,7 +238,7 @@ def pytest_sessionstart(session):
 
         # Start ZAP
         session.config.log_file = open(os.path.expanduser(session.config.option.zap_log), 'w')
-        #TODO catch exception on launching
+        #TODO catch exception on launching (for example Java version issue)
         session.config.zap_process = subprocess.Popen(zap_script,
                                                       cwd=zap_path,
                                                       stdout=session.config.log_file,
@@ -397,10 +400,10 @@ def pytest_sessionfinish(session):
     #TODO Remove this when the session is archived by default
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
     if session.config.option.zap_save_session:
-        #TODO Wait for zap.session.lck to not exist
         wait_for_lock_file_removed(os.path.join(session.config.option.zap_home, 'zap.session.lck'))
         session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
+            #TODO Use compression
             session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
             for session_file in session_files:
                 session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
