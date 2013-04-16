@@ -309,9 +309,11 @@ def pytest_sessionfinish(session):
     # Passive scan
     wait_for_passive_scan(zap)
 
+    zap_urls = copy.deepcopy(zap.core.urls)
+    logger.info('Got %s URLs' % len(zap_urls))
+
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
-        zap_urls = copy.deepcopy(zap.core.urls)
         logger.info('Spider progress: 0%')
         zap.urlopen(session.config.option.zap_target)
         time.sleep(2)  # Give the sites tree a chance to get updated
@@ -327,7 +329,8 @@ def pytest_sessionfinish(session):
         logger.info('Spider progress: 100%')
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
-        logger.info('Spider found %s additional URLs' % (len(zap.core.urls) - len(zap_urls)))
+        new_urls = copy.deepcopy(zap.core.urls)
+        logger.info('Spider found %s additional URLs' % (len(new_urls) - len(zap_urls)))
         wait_for_passive_scan(zap)
     else:
         logger.info('Skipping spider')
