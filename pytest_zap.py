@@ -320,9 +320,11 @@ def pytest_sessionfinish(session):
         while status < 100:
             new_status = int(zap.spider.status)
             if new_status > status:
-                if new_status < 100:
-                    logger.info('Spider progress: %s%%' % new_status)
+                level = logging.INFO
                 status = new_status
+            else:
+                level = logging.DEBUG
+            logger.log(level, 'Spider progress: %s%%' % new_status)
             time.sleep(5)
         logger.info('Spider progress: 100%')
         #TODO API call for new URLs discovered by spider
@@ -343,9 +345,11 @@ def pytest_sessionfinish(session):
         while status < 100:
             new_status = int(zap.ascan.status)
             if new_status > status:
-                if new_status < 100:
-                    logger.info('Scan progress: %s%%' % new_status)
+                level = logging.INFO
                 status = new_status
+            else:
+                level = logging.DEBUG
+            logger.log(level, 'Scan progress: %s%%' % new_status)
             time.sleep(5)
         logger.info('Scan progress: 100%')
         zap_alerts.extend(get_alerts(zap, start=len(zap_alerts)))
@@ -449,9 +453,10 @@ def is_zap_running(url):
 def wait_for_passive_scan(api):
     logger = logging.getLogger(__name__)
     logger.info('Waiting for passive scan')
+    logger.info('Records to scan: %s' % api.pscan.records_to_scan)
     while int(api.pscan.records_to_scan) > 0:
-        logger.info('Records to scan: %s' % api.pscan.records_to_scan)
         time.sleep(5)
+        logger.info('Records to scan: %s' % api.pscan.records_to_scan)
     logger.info('Finished passive scan')
 
 
