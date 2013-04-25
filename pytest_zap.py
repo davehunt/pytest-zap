@@ -315,8 +315,6 @@ def pytest_sessionfinish(session):
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
         logger.info('Spider progress: 0%')
-        zap.urlopen(session.config.option.zap_target)
-        time.sleep(2)  # Give the sites tree a chance to get updated
         zap.spider.scan(session.config.option.zap_target)
         status = int(zap.spider.status)
         while status < 100:
