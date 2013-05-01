@@ -29,6 +29,7 @@ For full usage details run the following command:
       --zap-host=str      host zap is listening on. (default: localhost)
       --zap-port=int      port zap is listening on. (default: 8080)
       --zap-target=url    target url for spider and scan.
+      --zap-exclude=str   exclude urls matching this regex when scanning.
       --zap-spider        spider the target. (default: False)
       --zap-scan          scan the target. (default: False)
       --zap-save          save the zap session in zap.session within home directory. (default: False)

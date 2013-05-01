@@ -53,6 +53,7 @@ def pytest_addoption(parser):
     group._addoption('--zap-port',
         action='store',
         dest='zap_port',
+        metavar='int',
         default=8080,
         type='int',
         help='port zap is listening on. (default: %default)')
@@ -61,6 +62,11 @@ def pytest_addoption(parser):
         dest='zap_target',
         metavar='url',
         help='target url for spider and scan.')
+    group._addoption('--zap-exclude',
+        action='store',
+        dest='zap_exclude',
+        metavar='str',
+        help='exclude urls matching this regex when scanning.')
     group._addoption('--zap-spider',
         action='store_true',
         dest='zap_spider',
@@ -314,6 +320,8 @@ def pytest_sessionfinish(session):
 
     # Spider
     if session.config.option.zap_spider and session.config.option.zap_target:
+        if session.config.option.zap_exclude:
+            zap.spider.exclude_from_scan(session.config.option.zap_exclude)
         logger.info('Spider progress: 0%')
         zap.spider.scan(session.config.option.zap_target)
         status = int(zap.spider.status)
@@ -339,6 +347,8 @@ def pytest_sessionfinish(session):
 
     # Active scan
     if session.config.option.zap_scan and session.config.option.zap_target:
+        if session.config.option.zap_exclude:
+            zap.ascan.exclude_from_scan(session.config.option.zap_exclude)
         logger.info('Scan progress: 0%')
         zap.ascan.scan(session.config.option.zap_target)
         status = int(zap.ascan.status)
