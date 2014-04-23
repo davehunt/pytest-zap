@@ -18,83 +18,99 @@ __version__ = '0.1'
 
 def pytest_addoption(parser):
     group = parser.getgroup('zap', 'zap')
-    group._addoption('--zap-interactive',
+    group._addoption(
+        '--zap-interactive',
         action='store_true',
         dest='zap_interactive',
         default=False,
         help='run zap in interactive mode. (default: %default)')
-    group._addoption('--zap-path',
+    group._addoption(
+        '--zap-path',
         action='store',
         dest='zap_path',
         metavar='path',
         help='location of zap installation.')
-    group._addoption('--zap-log',
+    group._addoption(
+        '--zap-log',
         action='store',
         dest='zap_log',
         default='zap.log',
         metavar='path',
         help='location of zap log file. (default %default)')
-    group._addoption('--zap-home',
+    group._addoption(
+        '--zap-home',
         action='store',
         dest='zap_home',
         metavar='path',
         help='location of zap home directory.')
-    group._addoption('--zap-config',
+    group._addoption(
+        '--zap-config',
         action='store',
         dest='zap_config',
         default='zap.cfg',
         metavar='path',
         help='location of zap configuration file. (default: %default)')
-    group._addoption('--zap-host',
+    group._addoption(
+        '--zap-host',
         action='store',
         dest='zap_host',
         default='localhost',
         metavar='str',
         help='host zap is listening on. (default: %default)')
-    group._addoption('--zap-port',
+    group._addoption(
+        '--zap-port',
         action='store',
         dest='zap_port',
         metavar='int',
         default=8080,
         type='int',
         help='port zap is listening on. (default: %default)')
-    group._addoption('--zap-target',
+    group._addoption(
+        '--zap-target',
         action='store',
         dest='zap_target',
         metavar='url',
         help='target url for spider and scan.')
-    group._addoption('--zap-exclude',
+    group._addoption(
+        '--zap-exclude',
         action='store',
         dest='zap_exclude',
         metavar='str',
         help='exclude urls matching this regex when scanning.')
-    group._addoption('--zap-spider',
+    group._addoption(
+        '--zap-spider',
         action='store_true',
         dest='zap_spider',
         default=False,
         help='spider the target. (default: %default)')
-    group._addoption('--zap-scan',
+    group._addoption(
+        '--zap-scan',
         action='store_true',
         dest='zap_scan',
         default=False,
         help='scan the target. (default: %default)')
-    group._addoption('--zap-save',
+    group._addoption(
+        '--zap-save',
         action='store_true',
         dest='zap_save_session',
         default=False,
-        help='save the zap session in zap.session within home directory. (default: %default)')
-    group._addoption('--zap-load',
+        help='save the zap session in zap.session within home directory. '
+        '(default: %default)')
+    group._addoption(
+        '--zap-load',
         action='store',
         dest='zap_load_session',
         metavar='path',
         help='location of an archived zap session to open.')
-    group._addoption('--zap-ignore',
+    group._addoption(
+        '--zap-ignore',
         action='store',
         dest='zap_ignore',
         default='zap_ignore.txt',
         metavar='path',
         help='location of ignored alerts text file. (default: %default)')
-    group._addoption('--zap-skip-tests',
+    group._addoption(
+        '--zap-skip-tests',
         action='store_true',
         dest='zap_skip_tests',
         default=False,
@@ -122,17 +138,20 @@ def pytest_configure(config):
     config._zap_config.read(config.option.zap_config)
 
     config.option.zap_target = config.option.zap_target or \
-                               (hasattr(config.option, 'base_url') and config.option.base_url)
+        (hasattr(config.option, 'base_url') and config.option.base_url)
 
 
 #TODO Use py.test fixtures
 #See http://pytest.org/latest/fixture.html
 def pytest_sessionstart(session):
     logger = logging.getLogger(__name__)
-    if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
+    if hasattr(session.config, 'slaveinput') or \
+            session.config.option.collectonly:
         return
 
-    zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
+    zap_url = 'http://%s:%s' % (
+        session.config.option.zap_host,
+        session.config.option.zap_port)
     proxies = {'http': zap_url, 'https': zap_url}
 
     if not session.config._zap_config.has_option('control', 'start') or\
@@ -158,14 +177,15 @@ def pytest_sessionstart(session):
                     # Win XP default path
                     zap_path = "C:\Program Files\OWASP\Zed Attack Proxy"
             else:
-                message = 'Installation directory must be set using --zap-path command line option'
+                message = 'Installation directory must be set using ' \
+                    '--zap-path command line option'
                 logger.error(message)
                 raise Exception(message)
 
         #TODO Support user directory for ZAP home
-        zap_home = session.config.option.zap_home and\
-                   os.path.abspath(session.config.option.zap_home) or\
-                   os.path.join(zap_path, 'home')
+        zap_home = session.config.option.zap_home and \
+            os.path.abspath(session.config.option.zap_home) or \
+            os.path.join(zap_path, 'home')
         session.config.option.zap_home = zap_home
 
         if not os.path.exists(zap_home):
@@ -174,7 +194,8 @@ def pytest_sessionstart(session):
 
         license_path = os.path.join(zap_home, 'AcceptedLicense')
         if not os.path.exists(license_path):
-            # Create a blank accepted license file, otherwise will be prompted for
+            # Create a blank accepted license file, otherwise will be
+            # prompted for
             logger.info('Creating blank license file in %s' % license_path)
             license_file = open(license_path, 'w')
             license_file.close()
@@ -183,10 +204,10 @@ def pytest_sessionstart(session):
         #TODO Move to method?
         config_path = os.path.join(zap_home, 'config.xml')
         default_config_path = os.path.join(zap_path, 'xml', 'config.xml')
-        base_config_path = os.path.exists(config_path) and\
-                           os.path.getsize(config_path) > 0 and\
-                           config_path or\
-                           default_config_path
+        base_config_path = os.path.exists(config_path) and \
+            os.path.getsize(config_path) > 0 and \
+            config_path or \
+            default_config_path
 
         logger.info('Using configuration from %s' % base_config_path)
         document = parse(base_config_path)
@@ -244,7 +265,8 @@ def pytest_sessionstart(session):
             raise Exception(message)
 
         # Start ZAP
-        session.config.log_file = open(os.path.expanduser(session.config.option.zap_log), 'w')
+        session.config.log_file = open(os.path.expanduser(
+            session.config.option.zap_log), 'w')
         #TODO catch exception on launching (for example Java version issue)
         session.config.zap_process = subprocess.Popen(
             zap_script, cwd=zap_path, stdout=session.config.log_file,
@@ -275,31 +297,35 @@ def pytest_sessionstart(session):
 
     # Save session
     if session.config.option.zap_save_session:
-        session_path = os.path.join(os.path.abspath(session.config.option.zap_home), 'zap')
+        session_path = os.path.join(os.path.abspath(
+            session.config.option.zap_home), 'zap')
         logger.info('Saving session in %s' % session_path)
 
         if not session.config.option.zap_home:
-            logger.error('Home directory must be set using --zap-home command line option')
+            logger.error('Home directory must be set using --zap-home command '
+                         'line option')
 
         session.config.zap.core.save_session(session_path)
     else:
         logger.info('Skipping save session')
 
     logger.info('Generating a root CA certificate')
-    #TODO Change this to a function call
-    # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=572
-    session.config.zap.core.generate_root_ca
+    session.config.zap.core.generate_root_ca()
 
     if session.config.option.zap_load_session:
         try:
-            #TODO Remove this when the archived sessions are supported by default
+            #TODO Remove this when the archived sessions
+            # are supported by default
             # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
-            load_session_zip_path = os.path.expanduser(session.config.option.zap_load_session)
+            load_session_zip_path = os.path.expanduser(
+                session.config.option.zap_load_session)
             logger.info('Extracting session from %s' % load_session_zip_path)
             load_session_zip = zipfile.ZipFile(load_session_zip_path)
-            load_session_path = os.path.abspath(os.path.join(session.config.option.zap_home, 'load_session'))
+            load_session_path = os.path.abspath(os.path.join(
+                session.config.option.zap_home, 'load_session'))
             load_session_zip.extractall(load_session_path)
-            load_session_file = glob.glob(os.path.join(load_session_path, '*.session'))[0]
+            load_session_file = glob.glob(os.path.join(
+                load_session_path, '*.session'))[0]
             logger.info('Loading session from %s' % load_session_file)
             session.config.zap.core.load_session(load_session_file)
         except (IOError, zipfile.BadZipfile) as e:
@@ -315,7 +341,8 @@ def pytest_runtest_setup(item):
 
 def pytest_sessionfinish(session):
     logger = logging.getLogger(__name__)
-    if hasattr(session.config, 'slaveinput') or session.config.option.collectonly:
+    if hasattr(session.config, 'slaveinput') or \
+            session.config.option.collectonly:
         return
 
     print '\n'
@@ -347,7 +374,8 @@ def pytest_sessionfinish(session):
         #TODO API call for new URLs discovered by spider
         # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
         new_urls = copy.deepcopy(zap.core.urls)
-        logger.info('Spider found %s additional URLs' % (len(new_urls) - len(zap_urls)))
+        logger.info('Spider found %s additional URLs' % (
+            len(new_urls) - len(zap_urls)))
         wait_for_passive_scan(zap)
     else:
         logger.info('Skipping spider')
@@ -387,13 +415,15 @@ def pytest_sessionfinish(session):
             else:
                 alerts.append(alert)
         if ignored_alerts:
-            for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in ignored_alerts]):
+            for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in
+                             ignored_alerts]):
                 logger.info('Ignored alert: %s' % alert)
     else:
         alerts.extend(zap_alerts)
 
     if alerts:
-        for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in alerts]):
+        for alert in set(['%s [%s]' % (i['alert'], i['risk']) for i in
+                         alerts]):
             logger.warn('Alert: %s' % alert)
 
     #TODO Save alerts report
@@ -402,15 +432,17 @@ def pytest_sessionfinish(session):
     #TODO Save URLs report
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=368
 
-    if not session.config._zap_config.has_option('control', 'stop') or\
-        session.config._zap_config.getboolean('control', 'stop'):
+    if not session.config._zap_config.has_option('control', 'stop') or \
+            session.config._zap_config.getboolean('control', 'stop'):
         logger.info('Stopping ZAP')
         try:
             zap.core.shutdown()
         except:
             pass
         try:
-            zap_url = 'http://%s:%s' % (session.config.option.zap_host, session.config.option.zap_port)
+            zap_url = 'http://%s:%s' % (
+                session.config.option.zap_host,
+                session.config.option.zap_port)
             wait_for_zap_to_stop(zap_url)
         except:
             if hasattr(session.config, 'zap_process'):
@@ -424,13 +456,17 @@ def pytest_sessionfinish(session):
     #TODO Remove this when the session is archived by default
     # Blocked by http://code.google.com/p/zaproxy/issues/detail?id=373
     if session.config.option.zap_save_session:
-        wait_for_lock_file_removed(os.path.join(session.config.option.zap_home, 'zap.session.lck'))
-        session_files = glob.glob(os.path.join(session.config.option.zap_home, 'zap.session*'))
+        wait_for_lock_file_removed(os.path.join(
+            session.config.option.zap_home, 'zap.session.lck'))
+        session_files = glob.glob(os.path.join(
+            session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
             #TODO Use compression
-            session_zip = zipfile.ZipFile(os.path.join(session.config.option.zap_home, 'zap_session.zip'), 'w')
+            session_zip = zipfile.ZipFile(os.path.join(
+                session.config.option.zap_home, 'zap_session.zip'), 'w')
             for session_file in session_files:
-                session_zip.write(session_file, session_file.rpartition(os.path.sep)[2])
+                session_zip.write(session_file, session_file.rpartition(
+                    os.path.sep)[2])
             session_zip.close()
             logger.info('Session archived in %s' % session_zip.filename)
         else:
@@ -444,7 +480,8 @@ def get_alerts(api, start=0):
     alerts_per_request = 1000
     alerts = []
     while True:
-        logger.info('Getting alerts: %s-%s' % (start, (start + alerts_per_request)))
+        logger.info('Getting alerts: %s-%s' % (start,
+                    (start + alerts_per_request)))
         new_alerts = api.core.alerts(start=start, count=alerts_per_request)
         alerts.extend(new_alerts)
         if len(new_alerts) == alerts_per_request:
@@ -459,7 +496,8 @@ def is_zap_running(url):
     try:
         proxies = {'http': url, 'https': url}
         response = urllib.urlopen('http://zap/', proxies=proxies)
-        if 'ZAP-Header' in response.headers.get('Access-Control-Allow-Headers', []):
+        if 'ZAP-Header' in response.headers.get(
+                'Access-Control-Allow-Headers', []):
             return True
         else:
             message = 'Service running at %s is not ZAP' % url
@@ -486,7 +524,8 @@ def wait_for_lock_file_removed(path):
     while os.path.exists(path):
         time.sleep(1)
         if time.time() > end_time:
-            message = 'Timeout after %s seconds waiting for lock file to be removed: %s' % (timeout, path)
+            message = 'Timeout after %s seconds waiting for lock file to be ' \
+                'removed: %s' % (timeout, path)
             logger.error(message)
             raise Exception(message)
 
@@ -513,7 +552,8 @@ def wait_for_zap_to_stop(url):
     while is_zap_running(url):
         time.sleep(1)
         if time.time() > end_time:
-            message = 'Timeout after %s seconds waiting for ZAP to shutdown' % timeout
+            message = 'Timeout after %s seconds waiting for ZAP to ' \
+                'shutdown' % timeout
             logger.error(message)
             raise Exception(message)
     logger.info('ZAP has successfully shutdown')
