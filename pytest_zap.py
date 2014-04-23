@@ -15,6 +15,7 @@ from zapv2 import ZAPv2
 
 __version__ = '0.1'
 
+
 def pytest_addoption(parser):
     group = parser.getgroup('zap', 'zap')
     group._addoption('--zap-interactive',
@@ -245,10 +246,18 @@ def pytest_sessionstart(session):
         # Start ZAP
         session.config.log_file = open(os.path.expanduser(session.config.option.zap_log), 'w')
         #TODO catch exception on launching (for example Java version issue)
-        session.config.zap_process = subprocess.Popen(zap_script,
-                                                      cwd=zap_path,
-                                                      stdout=session.config.log_file,
-                                                      stderr=subprocess.STDOUT)
+        session.config.zap_process = subprocess.Popen(
+            zap_script, cwd=zap_path, stdout=session.config.log_file,
+            stderr=subprocess.STDOUT)
+
+        time.sleep(5)
+        return_code = session.config.zap_process.poll()
+        if return_code is not None:
+            message = 'Failed to start ZAP, check %s for details' % \
+                session.config.log_file.name
+            logger.error(message)
+            raise Exception(message)
+
         try:
             wait_for_zap_to_start(zap_url)
             session.config.zap = ZAPv2(proxies=proxies)
