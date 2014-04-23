@@ -165,7 +165,7 @@ def pytest_sessionstart(session):
             # Run as a daemon
             zap_script.append('-daemon')
 
-        zap_script.append('-port %s' % session.config.option.zap_port)
+        zap_script.extend(['-port', str(session.config.option.zap_port)])
 
         #TODO Support user directory for ZAP path
         if session.config.option.zap_path:
