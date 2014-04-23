@@ -445,7 +445,7 @@ def get_alerts(api, start=0):
     alerts = []
     while True:
         logger.info('Getting alerts: %s-%s' % (start, (start + alerts_per_request)))
-        new_alerts = api.core.alerts(start=start, count=alerts_per_request).get('alerts')
+        new_alerts = api.core.alerts(start=start, count=alerts_per_request)
         alerts.extend(new_alerts)
         if len(new_alerts) == alerts_per_request:
             start += alerts_per_request
