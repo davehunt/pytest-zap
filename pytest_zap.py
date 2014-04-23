@@ -168,8 +168,9 @@ def pytest_sessionstart(session):
         zap_script.append('-port %s' % session.config.option.zap_port)
 
         #TODO Support user directory for ZAP path
-        zap_path = session.config.option.zap_path
-        if not zap_path:
+        if session.config.option.zap_path:
+            zap_path = os.path.abspath(session.config.option.zap_path)
+        else:
             if platform.system() == 'Windows':
                 # Win 7 default path
                 zap_path = 'C:\Program Files (x86)\OWASP\Zed Attack Proxy'
