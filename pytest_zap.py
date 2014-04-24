@@ -227,13 +227,6 @@ def pytest_sessionstart(session):
             user_dir.appendChild(document.createTextNode(zap_home))
 
         if session.config.option.zap_interactive:
-            # Enable API
-            enabled = document.createElement('enabled')
-            enabled.appendChild(document.createTextNode('true'))
-            api = document.createElement('api')
-            api.appendChild(enabled)
-            config.appendChild(api)
-
             # Disable update checking
             start = config.getElementsByTagName('start')[0]
             check_for_updates = document.createElement('checkForUpdates')
