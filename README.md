@@ -36,3 +36,4 @@ For full usage details run the following command:
       --zap-load=path     location of an archived zap session to open.
       --zap-ignore=path   location of ignored alerts text file. (default: zap_ignore.txt)
       --zap-skip-tests    skip all tests
+      --zap-observe       enable observation mode to prevent failing when alerts are found. (default False)

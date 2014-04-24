@@ -119,7 +119,8 @@ def pytest_addoption(parser):
         action='store_true',
         dest='zap_observe',
         default=False,
-        help='run in observation mode will not fail when alerts are found.')
+        help='enable observation mode to prevent failing when alerts are '
+        'found. (default %default)')
 
 
 def pytest_configure(config):
