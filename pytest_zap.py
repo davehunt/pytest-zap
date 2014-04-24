@@ -177,12 +177,15 @@ def pytest_sessionstart(session):
                     # Win XP default path
                     zap_path = 'C:\Program Files\OWASP\Zed Attack Proxy'
             elif 'darwin' in platform.system().lower():
-                zap_path = '/Applications/OWASP ZAP.app/Contents/Java'
+                zap_path = '/Applications/OWASP ZAP.app'
             else:
                 message = 'Installation directory must be set using ' \
                     '--zap-path command line option'
                 logger.error(message)
                 raise Exception(message)
+
+        if zap_path.rstrip(os.path.sep).endswith('.app'):
+            zap_path = os.path.join(zap_path, 'Contents', 'Java')
 
         zap_home = session.config.option.zap_home and \
             os.path.expanduser(session.config.option.zap_home) or \
