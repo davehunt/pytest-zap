@@ -167,9 +167,8 @@ def pytest_sessionstart(session):
 
         zap_script.extend(['-port', str(session.config.option.zap_port)])
 
-        #TODO Support user directory for ZAP path
         if session.config.option.zap_path:
-            zap_path = os.path.abspath(session.config.option.zap_path)
+            zap_path = os.path.expanduser(session.config.option.zap_path)
         else:
             if platform.system() == 'Windows':
                 # Win 7 default path
