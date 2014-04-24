@@ -114,7 +114,12 @@ def pytest_addoption(parser):
         dest='zap_skip_tests',
         default=False,
         help='skip all tests')
-    #TODO Add observation mode to prevent failing when alerts are raised
+    group._addoption(
+        '--zap-observe',
+        action='store_true',
+        dest='zap_observe',
+        default=False,
+        help='run in observation mode will not fail when alerts are found.')
 
 
 def pytest_configure(config):
@@ -436,6 +441,9 @@ def pytest_sessionfinish(session):
             logger.warn('No session files to archive')
 
     #TODO Fail if alerts were raised (unless in observation mode)
+    if not session.config.option.zap_observe and len(alerts) > 0:
+        logger.error('Alerts raised')
+        session.exitstatus = 1
 
 
 def get_alerts(api, start=0):
