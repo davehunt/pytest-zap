@@ -184,9 +184,8 @@ def pytest_sessionstart(session):
                 logger.error(message)
                 raise Exception(message)
 
-        #TODO Support user directory for ZAP home
         zap_home = session.config.option.zap_home and \
-            os.path.abspath(session.config.option.zap_home) or \
+            os.path.expanduser(session.config.option.zap_home) or \
             os.path.join(zap_path, 'home')
         session.config.option.zap_home = zap_home
 
