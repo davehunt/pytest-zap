@@ -420,9 +420,13 @@ def pytest_sessionfinish(session):
         session_files = glob.glob(os.path.join(
             session.config.option.zap_home, 'zap.session*'))
         if len(session_files) > 0:
-            #TODO Use compression
+            try:
+                import zlib  # NOQA
+                mode = zipfile.ZIP_DEFLATED
+            except:
+                mode = zipfile.ZIP_STORED
             session_zip = zipfile.ZipFile(os.path.join(
-                session.config.option.zap_home, 'zap_session.zip'), 'w')
+                session.config.option.zap_home, 'zap_session.zip'), 'w', mode)
             for session_file in session_files:
                 session_zip.write(session_file, session_file.rpartition(
                     os.path.sep)[2])
