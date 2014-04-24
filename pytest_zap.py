@@ -227,7 +227,6 @@ def pytest_sessionstart(session):
         # Start ZAP
         session.config.log_file = open(os.path.expanduser(
             session.config.option.zap_log), 'w')
-        #TODO catch exception on launching (for example Java version issue)
         session.config.zap_process = subprocess.Popen(
             zap_script, cwd=zap_path, stdout=session.config.log_file,
             stderr=subprocess.STDOUT)
