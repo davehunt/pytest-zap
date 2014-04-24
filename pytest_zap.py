@@ -1,5 +1,4 @@
 import glob
-from xml.dom.minidom import parse
 from ConfigParser import SafeConfigParser
 import copy
 import zipfile
@@ -204,49 +203,13 @@ def pytest_sessionstart(session):
             license_file = open(license_path, 'w')
             license_file.close()
 
-        # Create config.xml file
-        #TODO Move to method?
-        config_path = os.path.join(zap_home, 'config.xml')
-        default_config_path = os.path.join(zap_path, 'xml', 'config.xml')
-        base_config_path = os.path.exists(config_path) and \
-            os.path.getsize(config_path) > 0 and \
-            config_path or \
-            default_config_path
-
-        logger.info('Using configuration from %s' % base_config_path)
-        document = parse(base_config_path)
-        config = document.getElementsByTagName('config')[0]
-
-        # Set user directory
-        user_dir = config.getElementsByTagName('userDir')[0]
-        if user_dir.hasChildNodes():
-            user_dir.replaceChild(
-                document.createTextNode(zap_home),
-                user_dir.firstChild)
-        else:
-            user_dir.appendChild(document.createTextNode(zap_home))
-
         if session.config.option.zap_interactive:
-            # Disable update checking
-            start = config.getElementsByTagName('start')[0]
-            check_for_updates = document.createElement('checkForUpdates')
-            check_for_updates.appendChild(document.createTextNode('0'))
-            start.appendChild(check_for_updates)
-            day_last_checked = document.createElement('dayLastChecked')
-            day_last_checked.appendChild(document.createTextNode('Never'))
-            start.appendChild(day_last_checked)
+            zap_script.extend(['-config', 'start.checkForUpdates=false'])
+            zap_script.extend(['-config', 'start.dayLastChecked=Never'])
 
         # Set proxy
-        proxy = config.getElementsByTagName('proxy')[0]
-        ip = proxy.getElementsByTagName('ip')[0]
-        ip.replaceChild(
-            document.createTextNode(session.config.option.zap_host),
-            ip.firstChild)
-
-        logger.info('Writing configuration to %s' % config_path)
-        config_file = open(config_path, 'w')
-        document.writexml(config_file)
-        config_file.close()
+        zap_script.extend([
+            '-config', 'proxy.ip=%s' % session.config.option.zap_host])
 
         zap_script.extend(['-dir', zap_home])
 
