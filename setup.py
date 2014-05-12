@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pytest-zap',
-      version='0.1',
+      version='0.2',
       description='OWASP ZAP plugin for py.test.',
       author='Dave Hunt',
       author_email='dhunt@mozilla.com',
