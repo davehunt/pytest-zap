@@ -1,7 +1,7 @@
 pytest_zap
 ==========
 
-pytest_zap is a plugin for [py.test](http://pytest.org/) that provides support for running [OWASP Zed Attack Proxy](http://owasp.com/index.php/OWASP_Zed_Attack_Proxy_Project).
+pytest_zap is a plugin for [py.test](http://pytest.org/) that provides support for running [OWASP Zed Attack Proxy](https://www.owasp.org/index.php/OWASP_Zed_Attack_Proxy_Project).
 
 Requires:
 
